@@ -1,0 +1,3 @@
+C:/Users/ADRIANA/Desktop/universidad/personal/proyectoFinalPOO-main/cmake-build-debug/CMakeFiles/practica_sfml.dir
+C:/Users/ADRIANA/Desktop/universidad/personal/proyectoFinalPOO-main/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/ADRIANA/Desktop/universidad/personal/proyectoFinalPOO-main/cmake-build-debug/CMakeFiles/rebuild_cache.dir
