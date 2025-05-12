@@ -9,9 +9,13 @@ protected:
     sf::Sprite sprite;
     std::vector<sf::Texture> texturasDerecha;
     std::vector<sf::Texture> texturasIzquierda;
+
     int frameActual = 0;
-    bool moviendoDerecha = true;
+    bool moviendoDerecha = false;
+    bool moviendoIzquierda = false;
     bool enMovimiento = false;
+    bool mirandoDerecha = true;  // Para recordar la última dirección
+
     sf::Clock relojAnimacion;
 
     // Variables para el salto
@@ -24,14 +28,26 @@ public:
     HormigaNormal();
     HormigaNormal(std::string nombre, int vitalidad, int alimento, std::vector<int> posicion);
     virtual ~HormigaNormal();
+
+    // Métodos de movimiento básico para todas las hormigas
     void caminarAdelante();
     void caminarAtras();
     void detener();
     void saltar();
     void recibirDañoEsporas(int esporas);
-    void actualizar();
+
+    // Métodos para actualizar y dibujar
+    virtual void actualizar();  // Virtual para que Ray pueda sobrescribirlo
     void dibujar(sf::RenderWindow& ventana);
-    sf::Vector2f getPosicion(){ return sprite.getPosition(); }
+
+    // Getters
+    sf::Vector2f getPosicion() const { return sprite.getPosition(); }
     bool estaEnAire() const { return enAire; }
+    bool estaMirandoDerecha() const { return mirandoDerecha; }
+
+    // Métodos para cargar texturas (protegidos para que las subclases puedan usarlos)
+protected:
+    void cargarTexturasDerecha(const std::string& ruta1, const std::string& ruta2);
+    void cargarTexturasIzquierda(const std::string& ruta1, const std::string& ruta2);
 };
 #endif //HORMIGANORMAL_H

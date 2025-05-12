@@ -17,10 +17,7 @@ int main() {
     // (ajustar estos valores según sea necesario)
     ray->getPosicion(); // No necesitamos el valor, solo verificar que existe el método
 
-    // Ajustar el punto de origen del sprite si es necesario
-    // Esto es importante porque afecta cómo se aplican los límites
-
-    std::cout << "Ejecutando en pantalla completa. Presiona Escape para salir." << std::endl;
+    std::cout << "Ejecutando el juego. Presiona Escape para salir." << std::endl;
 
     while (ventana.isOpen()) {
         sf::Event evento;
@@ -28,7 +25,7 @@ int main() {
             if (evento.type == sf::Event::Closed)
                 ventana.close();
 
-            // Salir de pantalla completa con Escape
+            // Salir con Escape
             if (evento.type == sf::Event::KeyPressed && evento.key.code == sf::Keyboard::Escape) {
                 ventana.close();
                 std::cout << "Cerrando aplicación..." << std::endl;
@@ -47,28 +44,33 @@ int main() {
         sf::Vector2f posicion = ray->getPosicion();
 
         // Obtener el tamaño del sprite para cálculos más precisos de límites
-        // Como no tenemos acceso directo al sprite, usaremos un valor estimado
-        // Idealmente, deberías añadir un método para obtener el tamaño del sprite
         float anchoSprite = 64.0f;  // Ajusta según el tamaño real (escala * ancho)
 
+        // Detectar tecla de ataque (A)
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+            int daño = ray->golpearConBaston();  // Llamamos directamente a golpearConBaston
+            // Podríamos usar el valor de daño si fuera necesario
+        }
+
         // Movimiento con teclas y comprobación de límites más precisos
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-            // Solo permitir movimiento si no toca el borde izquierdo
-            // Agregamos un pequeño margen (5 píxeles) para que no pegue exactamente al borde
-            if (posicion.x > limiteIzquierdo + 5.0f) {
-                ray->caminarAtras();
+        // Solo permitir movimiento si no está atacando
+        if (!ray->estaAtacando()) {
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+                // Solo permitir movimiento si no toca el borde izquierdo
+                if (posicion.x > limiteIzquierdo + 5.0f) {
+                    ray->caminarAtras();
+                }
+            }
+
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+                // Solo permitir movimiento si no toca el borde derecho
+                if (posicion.x < limiteDerecho - anchoSprite - 5.0f) {
+                    ray->caminarAdelante();
+                }
             }
         }
 
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-            // Solo permitir movimiento si no toca el borde derecho
-            // El límite considera el ancho del sprite y un pequeño margen
-            if (posicion.x < limiteDerecho - anchoSprite - 5.0f) {
-                ray->caminarAdelante();
-            }
-        }
-
-        // Actualiza animación si está en movimiento
+        // Actualiza animación y física
         ray->actualizar();
 
         ventana.clear();

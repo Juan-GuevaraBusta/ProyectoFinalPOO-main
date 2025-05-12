@@ -2,50 +2,60 @@
 #include <iostream>
 
 HormigaNormal::HormigaNormal() {
-
-};
+}
 
 HormigaNormal::HormigaNormal(std::string nombre, int vitalidad, int alimento, std::vector<int> posicion) : Personaje(nombre, vitalidad, alimento, posicion) {
-    // Cargar texturas derecha
-    sf::Texture texD1, texD2;
-    if (!texD1.loadFromFile("ant_right_1.png") || !texD2.loadFromFile("ant_right_2.png")) {
-        std::cerr << "Error cargando imágenes derecha" << std::endl;
-    }
-    texturasDerecha.push_back(texD1);
-    texturasDerecha.push_back(texD2);
+    // Reservar espacio para las texturas
+    texturasDerecha.resize(2);
+    texturasIzquierda.resize(2);
 
-    // Cargar texturas izquierda
-    sf::Texture texI1, texI2;
-    if (!texI1.loadFromFile("ant_left_1.png") || !texI2.loadFromFile("ant_left_2.png")) {
-        std::cerr << "Error cargando imágenes izquierda" << std::endl;
-    }
-    texturasIzquierda.push_back(texI1);
-    texturasIzquierda.push_back(texI2);
+    // Cargar texturas por defecto (para hormigas normales)
+    cargarTexturasDerecha("ray/raysano/RSright_1.png", "ray/raysano/RSright_2.png");
+    cargarTexturasIzquierda("ray/raysano/RSleft_1.png", "ray/raysano/RSleft_2.png");
 
+    // Utilizamos la textura derecha como inicial
     sprite.setTexture(texturasDerecha[0]);
-    sprite.setPosition(100.f, alturaSuelo);  // Iniciar en el suelo
-    sprite.setScale(2.0f, 2.0f); // escalar si es muy pequeño
-};
+    sprite.setPosition(100.f, alturaSuelo);
+    sprite.setScale(2.0f, 2.0f);
+}
 
 HormigaNormal::~HormigaNormal() {
+}
 
-};
+void HormigaNormal::cargarTexturasDerecha(const std::string& ruta1, const std::string& ruta2) {
+    if (!texturasDerecha[0].loadFromFile(ruta1) || !texturasDerecha[1].loadFromFile(ruta2)) {
+        std::cerr << "Error cargando imágenes derecha" << std::endl;
+    }
+}
+
+void HormigaNormal::cargarTexturasIzquierda(const std::string& ruta1, const std::string& ruta2) {
+    if (!texturasIzquierda[0].loadFromFile(ruta1) || !texturasIzquierda[1].loadFromFile(ruta2)) {
+        std::cerr << "Error cargando imágenes izquierda" << std::endl;
+    }
+}
 
 void HormigaNormal::caminarAdelante() {
     moviendoDerecha = true;
+    moviendoIzquierda = false;
+    mirandoDerecha = true;  // Recordar que está mirando a la derecha
     enMovimiento = true;
-    sprite.move(0.4, 0.f);
-};
+    sprite.move(0.1, 0.f);
+}
 
 void HormigaNormal::caminarAtras() {
     moviendoDerecha = false;
+    moviendoIzquierda = true;
+    mirandoDerecha = false;  // Recordar que está mirando a la izquierda
     enMovimiento = true;
-    sprite.move(-0.4, 0.f);
-};
+    sprite.move(-0.1, 0.f);
+}
 
 void HormigaNormal::detener() {
+    moviendoDerecha = false;
+    moviendoIzquierda = false;
     enMovimiento = false;
-};
+    // No cambiamos la textura aquí, se hará en actualizar()
+}
 
 void HormigaNormal::saltar() {
     // Solo permitir saltar si está en el suelo
@@ -53,27 +63,27 @@ void HormigaNormal::saltar() {
         velocidadY = -2.0f; // Velocidad inicial negativa (hacia arriba)
         enAire = true;
     }
-};
+}
 
 void HormigaNormal::recibirDañoEsporas(int esporas) {
-    this -> vitalidad -= esporas;
-};
+    this->vitalidad -= esporas;
+}
 
 void HormigaNormal::actualizar() {
-    // Actualizar animación de movimiento horizontal
-    if (enMovimiento) {
-        // Cambiar frame cada 0.25 segundos (4fps)
-        if (relojAnimacion.getElapsedTime().asSeconds() >= 0.15f) {
-            frameActual = (frameActual + 1) % 2;
+    // Cambiar frame cada 0.15 segundos (aprox. 6.7fps)
+    if (relojAnimacion.getElapsedTime().asSeconds() >= 0.15f) {
+        frameActual = (frameActual + 1) % 2;
 
-            if (moviendoDerecha) {
-                sprite.setTexture(texturasDerecha[frameActual]);
-            } else {
-                sprite.setTexture(texturasIzquierda[frameActual]);
-            }
-
-            relojAnimacion.restart();
+        // Seleccionar la textura correcta basada en el estado
+        if (moviendoDerecha || (!moviendoIzquierda && mirandoDerecha)) {
+            // Si se mueve a la derecha o está quieto pero mirando a la derecha
+            sprite.setTexture(texturasDerecha[frameActual]);
+        } else {
+            // Si se mueve a la izquierda o está quieto pero mirando a la izquierda
+            sprite.setTexture(texturasIzquierda[frameActual]);
         }
+
+        relojAnimacion.restart();
     }
 
     // Física del salto
@@ -92,8 +102,8 @@ void HormigaNormal::actualizar() {
             enAire = false;
         }
     }
-};
+}
 
 void HormigaNormal::dibujar(sf::RenderWindow& ventana) {
     ventana.draw(sprite);
-};
+}
