@@ -5,6 +5,7 @@
 #include <vector>
 #include "Jugador.h"
 #include "Personaje.h"
+#include "Escenario.h"  // Añadir include para Escenario
 
 // Clase forward declaration para evitar inclusión circular
 class HormigaInfectada;
@@ -33,7 +34,7 @@ private:
     float velocidadY = 0.0f;
     float gravedad = 0.015f;
     bool enAire = false;
-    float alturaSuelo = 660.0f;
+    float alturaSuelo = 750.0f;
 
     // Rango de ataque
     float rangoAtaque = 50.0f;
@@ -65,9 +66,10 @@ public:
     bool estaAtacando() const { return atacando; }
     float getAlturaSuelo() const { return alturaSuelo; }
     void setPosicion(float x, float y) { sprite.setPosition(x, y); }
+    sf::FloatRect getBounds() const { return sprite.getGlobalBounds(); }
 
     // Métodos para actualizar y dibujar
-    void actualizar();
+    void actualizar(Escenario* escenario = nullptr);  // Modificado para recibir escenario
     void dibujar(sf::RenderWindow& ventana);
 
 private:

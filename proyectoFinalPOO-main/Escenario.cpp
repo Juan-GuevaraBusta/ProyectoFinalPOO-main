@@ -2,11 +2,20 @@
 #include <iostream>
 
 Escenario::Escenario() : fondoCargado(false) {
-    // Cargar la textura del fondo desde una ruta fija dentro de la clase
+    // Inicializar límites por defecto
+    limiteIzquierdo = 0.0f;
+    limiteDerecho = 1366.0f;
+    limiteSuperior = 0.0f;
+    limiteInferior = 768.0f;
+
+    // *** CAMBIO 1: Definir una altura de suelo adecuada ***
+    alturaSuelo = 700.0f;  // Valor ajustado para que esté en la parte inferior
+
+    // *** CAMBIO 2: Corregir la ruta de la imagen del fondo ***
     if (!texturaFondo.loadFromFile("escenarios/escenario1.png")) {
-        std::cerr << "Error cargando imagen de fondo: escenario/fondo.png" << std::endl;
+        std::cerr << "Error cargando imagen de fondo: escenarios/escenario1.png" << std::endl;
         // Intentar con una ruta alternativa
-        if (!texturaFondo.loadFromFile("escenarios/escenario1.png")) {
+        if (!texturaFondo.loadFromFile("fondo.png")) {
             std::cerr << "Error cargando imagen de fondo alternativa: fondo.png" << std::endl;
         } else {
             fondoCargado = true;
@@ -36,17 +45,8 @@ Escenario::Escenario() : fondoCargado(false) {
         spriteFondo.setPosition(0, 0);
     }
 
-    // Inicializar límites por defecto
-    limiteIzquierdo = 0.0f;
-    limiteDerecho = 1366.0f;
-    limiteSuperior = 0.0f;
-    limiteInferior = 768.0f;
-
-    // Aquí puedes agregar plataformas predefinidas para tu escenario
-    // Por ejemplo:
+    // *** CAMBIO 3: Usar solo la plataforma que has definido ***
     agregarPlataforma(0.0f, 592.0f, 95.0f, 35.0f);  // Plataforma 1
-    //agregarPlataforma(600.0f, 400.0f, 200.0f, 20.0f);  // Plataforma 2
-    //agregarPlataforma(900.0f, 300.0f, 250.0f, 20.0f);  // Plataforma 3
 }
 
 Escenario::~Escenario() {
@@ -57,7 +57,6 @@ void Escenario::agregarPlataforma(float x, float y, float ancho, float alto) {
     sf::RectangleShape plataforma(sf::Vector2f(ancho, alto));
     plataforma.setPosition(x, y);
 
-    // ESTA ES LA LÍNEA QUE CONTROLA EL COLOR DE LAS PLATAFORMAS
     // Para plataformas visibles (durante pruebas):
     plataforma.setFillColor(sf::Color(139, 69, 19, 128));  // Marrón semi-transparente
 
@@ -74,6 +73,22 @@ bool Escenario::verificarColisionPlataforma(const sf::FloatRect& objetoBounds) {
         }
     }
     return false;
+}
+
+// *** CAMBIO 4: Modificar para manejar correctamente cuando no hay plataformas ***
+float Escenario::getAlturaPlatformaEn(float posX) {
+    // Recorremos todas las plataformas
+    for (const auto& plataforma : plataformas) {
+        sf::FloatRect bounds = plataforma.getGlobalBounds();
+
+        // Si la posición X está dentro de la plataforma
+        if (posX >= bounds.left && posX < bounds.left + bounds.width) {
+            return bounds.top; // Devuelve la altura (coordenada Y) de la plataforma
+        }
+    }
+
+    // Si no hay plataforma en esa posición, devolver la altura del suelo
+    return alturaSuelo;
 }
 
 void Escenario::configurarLimites(float izq, float der, float sup, float inf) {

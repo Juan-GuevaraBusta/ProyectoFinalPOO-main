@@ -82,7 +82,7 @@ void HormigaInfectada::recibirDaño(int daño) {
     }
 }
 
-void HormigaInfectada::actualizar() {
+void HormigaInfectada::actualizar(Escenario* escenario) {
     // Si está muerta, no hacer nada más
     if (!viva) return;
 
@@ -101,6 +101,51 @@ void HormigaInfectada::actualizar() {
 
     // Realizar movimiento errático
     caminarErraticamente();
+
+    // Física para caer por gravedad y colisiones con plataformas
+    if (enAire) {
+        // Aplicar gravedad
+        velocidadY += gravedad;
+
+        // Mover verticalmente
+        sprite.move(0, velocidadY);
+
+        // Verificar si tocó el suelo o una plataforma
+        if (escenario) {
+            // Obtener posición actual
+            sf::Vector2f posicion = sprite.getPosition();
+
+            // Verificar colisión con plataformas
+            float alturaPlatforma = escenario->getAlturaPlatformaEn(posicion.x);
+
+            // Si está por debajo de alguna plataforma
+            if (posicion.y >= alturaPlatforma - sprite.getGlobalBounds().height) {
+                // Reposicionar sobre la plataforma
+                sprite.setPosition(posicion.x, alturaPlatforma - sprite.getGlobalBounds().height);
+                velocidadY = 0;
+                enAire = false;
+            }
+        }
+
+        // Verificar si tocó el suelo
+        if (sprite.getPosition().y >= alturaSuelo) {
+            // Reposicionar en el suelo exactamente
+            sprite.setPosition(sprite.getPosition().x, alturaSuelo);
+            velocidadY = 0;
+            enAire = false;
+        }
+    } else if (escenario) {
+        // Si no está en el aire, verificar si hay plataforma debajo
+        sf::Vector2f posicion = sprite.getPosition();
+        float alturaPlatforma = escenario->getAlturaPlatformaEn(posicion.x);
+
+        // Si no hay plataforma debajo (está en el borde)
+        if (posicion.y < alturaPlatforma - sprite.getGlobalBounds().height &&
+            posicion.y < alturaSuelo - 1.0f) {
+            enAire = true;  // Comenzar a caer
+            velocidadY = 0.1f;  // Velocidad inicial pequeña
+        }
+    }
 }
 
 void HormigaInfectada::dibujar(sf::RenderWindow& ventana) {

@@ -1,6 +1,7 @@
 #ifndef HORMIGANORMAL_H
 #define HORMIGANORMAL_H
 #include "Personaje.h"
+#include "Escenario.h"  // Añadir include para Escenario
 #include <SFML/Graphics.hpp>
 #include <vector>
 
@@ -37,7 +38,7 @@ public:
     void recibirDañoEsporas(int esporas);
 
     // Métodos para actualizar y dibujar
-    virtual void actualizar();  // Virtual para que Ray pueda sobrescribirlo
+    virtual void actualizar(Escenario* escenario = nullptr);  // Modificado para recibir escenario
     void dibujar(sf::RenderWindow& ventana);
 
     // Getters
@@ -45,6 +46,7 @@ public:
     bool estaEnAire() const { return enAire; }
     bool estaMirandoDerecha() const { return mirandoDerecha; }
     float getAlturaSuelo() const { return alturaSuelo; }
+    sf::FloatRect getBounds() const { return sprite.getGlobalBounds(); }
 
     // Setter adicional para la posición
     void setPosicion(float x, float y) { sprite.setPosition(x, y); }

@@ -69,7 +69,7 @@ void HormigaNormal::recibirDañoEsporas(int esporas) {
     this->vitalidad -= esporas;
 }
 
-void HormigaNormal::actualizar() {
+void HormigaNormal::actualizar(Escenario* escenario) {
     // Cambiar frame cada 0.15 segundos (aprox. 6.7fps)
     if (relojAnimacion.getElapsedTime().asSeconds() >= 0.15f) {
         frameActual = (frameActual + 1) % 2;
@@ -94,12 +94,40 @@ void HormigaNormal::actualizar() {
         // Mover verticalmente
         sprite.move(0, velocidadY);
 
+        // Verificar si tocó el suelo o una plataforma
+        if (escenario) {
+            // Obtener posición actual
+            sf::Vector2f posicion = sprite.getPosition();
+
+            // Verificar colisión con plataformas
+            float alturaPlatforma = escenario->getAlturaPlatformaEn(posicion.x);
+
+            // Si está por debajo de alguna plataforma
+            if (posicion.y >= alturaPlatforma - sprite.getGlobalBounds().height) {
+                // Reposicionar sobre la plataforma
+                sprite.setPosition(posicion.x, alturaPlatforma - sprite.getGlobalBounds().height);
+                velocidadY = 0;
+                enAire = false;
+            }
+        }
+
         // Verificar si tocó el suelo
         if (sprite.getPosition().y >= alturaSuelo) {
             // Reposicionar en el suelo exactamente
             sprite.setPosition(sprite.getPosition().x, alturaSuelo);
             velocidadY = 0;
             enAire = false;
+        }
+    } else if (escenario) {
+        // Si no está en el aire, verificar si hay plataforma debajo
+        sf::Vector2f posicion = sprite.getPosition();
+        float alturaPlatforma = escenario->getAlturaPlatformaEn(posicion.x);
+
+        // Si no hay plataforma debajo (está en el borde)
+        if (posicion.y < alturaPlatforma - sprite.getGlobalBounds().height &&
+            posicion.y < alturaSuelo - 1.0f) {
+            enAire = true;  // Comenzar a caer
+            velocidadY = 0.1f;  // Velocidad inicial pequeña
         }
     }
 }

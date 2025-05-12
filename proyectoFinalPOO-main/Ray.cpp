@@ -128,7 +128,7 @@ int Ray::getLuz() {
     return luz;
 }
 
-void Ray::actualizar() {
+void Ray::actualizar(Escenario* escenario) {
     // Verificar si el ataque ha terminado
     if (atacando && relojAtaque.getElapsedTime().asSeconds() >= 0.5f) {
         atacando = false;  // Terminar el ataque después de 0.5 segundos
@@ -163,15 +163,56 @@ void Ray::actualizar() {
         relojAnimacion.restart();
     }
 
-    // Física del salto
+    // *** CAMBIO 5: Modificar la física para asegurar que Ray esté siempre en el suelo o plataforma ***
+    float suelo = alturaSuelo;  // Por defecto usamos el suelo de Ray
+
+    // Si tenemos un escenario, usar su altura de suelo
+    if (escenario) {
+        suelo = escenario->getAlturaSuelo();
+
+        // Obtener posición actual
+        sf::Vector2f posicion = sprite.getPosition();
+
+        // Verificar colisión con plataformas
+        float alturaPlatforma = escenario->getAlturaPlatformaEn(posicion.x);
+
+        // Usar la plataforma como suelo si estamos sobre ella
+        if (alturaPlatforma < suelo) {
+            suelo = alturaPlatforma;
+        }
+    }
+
+    // Física del salto y gravedad
     if (enAire) {
+        // Aplicar gravedad
         velocidadY += gravedad;
+
+        // Mover verticalmente
         sprite.move(0, velocidadY);
 
-        if (sprite.getPosition().y >= alturaSuelo) {
-            sprite.setPosition(sprite.getPosition().x, alturaSuelo);
+        // Verificar si tocó el suelo o plataforma
+        if (sprite.getPosition().y >= suelo - sprite.getGlobalBounds().height) {
+            // Reposicionar exactamente sobre el suelo o plataforma
+            sprite.setPosition(sprite.getPosition().x, suelo - sprite.getGlobalBounds().height);
             velocidadY = 0;
             enAire = false;
+        }
+    } else {
+        // Si no está en el aire, verificar si debería caer
+        sf::Vector2f posicion = sprite.getPosition();
+        float alturaSuelo = suelo;
+
+        if (escenario) {
+            alturaSuelo = escenario->getAlturaPlatformaEn(posicion.x);
+        }
+
+        // Si está por encima del suelo (cayendo)
+        if (posicion.y < alturaSuelo - sprite.getGlobalBounds().height - 1.0f) {
+            enAire = true;
+            velocidadY = 0.1f;  // Iniciar caída
+        } else {
+            // Asegurar que siempre esté exactamente en el suelo o plataforma
+            sprite.setPosition(posicion.x, alturaSuelo - sprite.getGlobalBounds().height);
         }
     }
 }

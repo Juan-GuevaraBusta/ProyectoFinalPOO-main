@@ -8,27 +8,26 @@
 int main() {
     // Configuración de la ventana
     sf::RenderWindow ventana(sf::VideoMode(1366, 768), "MiJuego");
-    ventana.setFramerateLimit(60); // Limitar a 60 FPS para un rendimiento constante
+    ventana.setFramerateLimit(60);
 
-    // Crear el escenario (la imagen y plataformas se cargan internamente)
+    // *** CAMBIO 6: Crear el escenario y configurarlo correctamente ***
     Escenario escenario;
 
     // Configurar límites del escenario
     escenario.configurarLimites(0.0f, 1366.0f, 0.0f, 768.0f);
 
-    // Crear una instancia de Ray
+    // La altura del suelo ya se definió en el constructor (650.0f)
+
+    // *** CAMBIO 7: Crear el personaje Ray y posicionarlo correctamente en el suelo ***
     Ray *ray = new Ray("Ray");
+    ray->setPosicion(100.0f, escenario.getAlturaSuelo() - ray->getBounds().height);
 
-    // Crear una instancia de HormigaNormal
+    // Crear el resto de las hormigas y posicionarlas en el suelo
     HormigaNormal *hormigaNormal = new HormigaNormal("Hormiga", 2, 0, {0, 0});
+    hormigaNormal->setPosicion(400.0f, escenario.getAlturaSuelo() - hormigaNormal->getBounds().height);
 
-    // Crear una instancia de HormigaInfectada con solo 1 punto de vida
     HormigaInfectada *hormigaInfectada = new HormigaInfectada("Infectada", 1, {0, 0});
-
-    // Posicionar las hormigas
-    sf::Vector2f posRay = ray->getPosicion();
-    hormigaNormal->setPosicion(posRay.x + 350.0f, posRay.y - 250.0f);
-    hormigaInfectada->setPosicion(posRay.x + 450.0f, posRay.y + 10.0f);
+    hormigaInfectada->setPosicion(700.0f, escenario.getAlturaSuelo() - hormigaInfectada->getBounds().height);
 
     std::cout << "Ejecutando el juego. Controles:" << std::endl;
     std::cout << "- Flechas Izquierda/Derecha: Mover a Ray" << std::endl;
@@ -94,25 +93,10 @@ int main() {
             }
         }
 
-        // Comprobar colisiones con plataformas (ejemplo básico)
-        if (ray->estaEnAire()) {
-            sf::FloatRect rayBounds = sf::FloatRect(
-                ray->getPosicion().x, ray->getPosicion().y,
-                64.0f, 64.0f  // Tamaño aproximado del sprite de Ray
-            );
-
-            if (escenario.verificarColisionPlataforma(rayBounds)) {
-                // Si Ray colisiona con una plataforma mientras está en el aire
-                // aquí podrías hacer que se detenga sobre la plataforma
-                // Por simplicidad, no implementamos esto completamente
-                std::cout << "¡Ray colisionó con una plataforma!" << std::endl;
-            }
-        }
-
-        // Actualizar estados de los personajes
-        ray->actualizar();
-        hormigaNormal->actualizar();
-        hormigaInfectada->actualizar();
+        // Actualizar personajes pasando el escenario para física y colisiones
+        ray->actualizar(&escenario);
+        hormigaNormal->actualizar(&escenario);
+        hormigaInfectada->actualizar(&escenario);
 
         // Renderizado
         ventana.clear(); // Fondo negro

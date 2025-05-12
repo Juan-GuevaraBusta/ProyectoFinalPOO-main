@@ -20,6 +20,9 @@ private:
     float limiteSuperior;
     float limiteInferior;
 
+    // Altura del suelo general
+    float alturaSuelo;
+
 public:
     Escenario();
     ~Escenario();
@@ -27,20 +30,23 @@ public:
     // Método para agregar una plataforma
     void agregarPlataforma(float x, float y, float ancho, float alto);
 
-    // Método para verificar colisión con plataformas
+    // Métodos para colisiones
     bool verificarColisionPlataforma(const sf::FloatRect& objetoBounds);
+    float getAlturaPlatformaEn(float posX);
 
-    // Método para dibujar el escenario (fondo y plataformas)
+    // Método para dibujar el escenario
     void dibujar(sf::RenderWindow& ventana);
 
-    // Getters para los límites
+    // Getters
     float getLimiteIzquierdo() const { return limiteIzquierdo; }
     float getLimiteDerecho() const { return limiteDerecho; }
     float getLimiteSuperior() const { return limiteSuperior; }
     float getLimiteInferior() const { return limiteInferior; }
+    float getAlturaSuelo() const { return alturaSuelo; }
 
-    // Setters para los límites
+    // Setters
     void configurarLimites(float izq, float der, float sup, float inf);
+    void setAlturaSuelo(float altura) { alturaSuelo = altura; }
 };
 
 #endif // ESCENARIO_H
