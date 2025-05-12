@@ -33,7 +33,7 @@ private:
     float velocidadY = 0.0f;
     float gravedad = 0.015f;
     bool enAire = false;
-    float alturaSuelo = 150.0f;
+    float alturaSuelo = 660.0f;
 
     // Rango de ataque
     float rangoAtaque = 50.0f;

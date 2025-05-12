@@ -2,6 +2,7 @@
 #include "Ray.h"
 #include "HormigaNormal.h"
 #include "HormigaInfectada.h"
+#include "Escenario.h"
 #include <iostream>
 
 int main() {
@@ -9,9 +10,11 @@ int main() {
     sf::RenderWindow ventana(sf::VideoMode(1366, 768), "MiJuego");
     ventana.setFramerateLimit(60); // Limitar a 60 FPS para un rendimiento constante
 
-    // Variables para establecer los límites de la pantalla
-    float limiteIzquierdo = -200.0f;
-    float limiteDerecho = 1196.0f;
+    // Crear el escenario (la imagen y plataformas se cargan internamente)
+    Escenario escenario;
+
+    // Configurar límites del escenario
+    escenario.configurarLimites(0.0f, 1366.0f, 0.0f, 768.0f);
 
     // Crear una instancia de Ray
     Ray *ray = new Ray("Ray");
@@ -24,8 +27,8 @@ int main() {
 
     // Posicionar las hormigas
     sf::Vector2f posRay = ray->getPosicion();
-    hormigaNormal->setPosicion(posRay.x + 300.0f, posRay.y );
-    hormigaInfectada->setPosicion(posRay.x + 500.0f, posRay.y);
+    hormigaNormal->setPosicion(posRay.x + 350.0f, posRay.y - 250.0f);
+    hormigaInfectada->setPosicion(posRay.x + 450.0f, posRay.y + 10.0f);
 
     std::cout << "Ejecutando el juego. Controles:" << std::endl;
     std::cout << "- Flechas Izquierda/Derecha: Mover a Ray" << std::endl;
@@ -79,28 +82,49 @@ int main() {
         // Movimiento con teclas y comprobación de límites
         if (!ray->estaAtacando()) {
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-                if (posicion.x > limiteIzquierdo + 5.0f) {
+                if (posicion.x > escenario.getLimiteIzquierdo() + 5.0f) {
                     ray->caminarAtras();
                 }
             }
 
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-                if (posicion.x < limiteDerecho - anchoSprite - 5.0f) {
+                if (posicion.x < escenario.getLimiteDerecho() - anchoSprite - 5.0f) {
                     ray->caminarAdelante();
                 }
+            }
+        }
+
+        // Comprobar colisiones con plataformas (ejemplo básico)
+        if (ray->estaEnAire()) {
+            sf::FloatRect rayBounds = sf::FloatRect(
+                ray->getPosicion().x, ray->getPosicion().y,
+                64.0f, 64.0f  // Tamaño aproximado del sprite de Ray
+            );
+
+            if (escenario.verificarColisionPlataforma(rayBounds)) {
+                // Si Ray colisiona con una plataforma mientras está en el aire
+                // aquí podrías hacer que se detenga sobre la plataforma
+                // Por simplicidad, no implementamos esto completamente
+                std::cout << "¡Ray colisionó con una plataforma!" << std::endl;
             }
         }
 
         // Actualizar estados de los personajes
         ray->actualizar();
         hormigaNormal->actualizar();
-        hormigaInfectada->actualizar();  // Incluso si está muerta, actualiza (pero no se moverá)
+        hormigaInfectada->actualizar();
 
         // Renderizado
         ventana.clear(); // Fondo negro
+
+        // Dibujar el escenario (fondo y plataformas)
+        escenario.dibujar(ventana);
+
+        // Luego dibujar los personajes
         ray->dibujar(ventana);
         hormigaNormal->dibujar(ventana);
-        hormigaInfectada->dibujar(ventana);  // Siempre dibuja, viva o muerta
+        hormigaInfectada->dibujar(ventana);
+
         ventana.display();
     }
 
