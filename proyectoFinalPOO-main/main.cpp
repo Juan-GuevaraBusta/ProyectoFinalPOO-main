@@ -1,24 +1,35 @@
 #include <SFML/Graphics.hpp>
 #include "Ray.h"
+#include "HormigaNormal.h"
 #include <iostream>
 
 int main() {
-    // Obtener la resolución del escritorio
+    // Configuración de la ventana
     sf::RenderWindow ventana(sf::VideoMode(1366, 768), "MiJuego");
+    ventana.setFramerateLimit(60); // Limitar a 60 FPS para un rendimiento constante
 
     // Variables para establecer los límites de la pantalla
     float limiteIzquierdo = -200.0f;
     float limiteDerecho = 1196.0f;
 
     // Crear una instancia de Ray
-    Ray *ray = new Ray("Nombre");
+    Ray *ray = new Ray("Ray");
 
-    // Posicionar a Ray en una buena posición inicial para pantalla completa
-    // (ajustar estos valores según sea necesario)
-    ray->getPosicion(); // No necesitamos el valor, solo verificar que existe el método
+    // Crear una instancia de HormigaNormal que aparezca a la derecha de Ray
+    HormigaNormal *hormigaNormal = new HormigaNormal("Hormiga", 2, 0, {0, 0});
 
-    std::cout << "Ejecutando el juego. Presiona Escape para salir." << std::endl;
+    // Posicionar la hormiga normal a 300 píxeles a la derecha
+    // Usamos la posición de Ray como referencia
+    sf::Vector2f posRay = ray->getPosicion();
+    hormigaNormal->setPosicion(posRay.x + 300.0f, posRay.y - 150);
 
+    std::cout << "Ejecutando el juego. Controles:" << std::endl;
+    std::cout << "- Flechas Izquierda/Derecha: Mover a Ray" << std::endl;
+    std::cout << "- Flecha Arriba: Saltar" << std::endl;
+    std::cout << "- A: Atacar" << std::endl;
+    std::cout << "- Escape: Salir" << std::endl;
+
+    // Bucle principal del juego
     while (ventana.isOpen()) {
         sf::Event evento;
         while (ventana.pollEvent(evento)) {
@@ -37,23 +48,22 @@ int main() {
             }
         }
 
-        // Por defecto está quieto, a menos que se mueva
+        // Por defecto los personajes están quietos
         ray->detener();
+        hormigaNormal->detener();
 
         // Obtener la posición actual de Ray
         sf::Vector2f posicion = ray->getPosicion();
 
-        // Obtener el tamaño del sprite para cálculos más precisos de límites
-        float anchoSprite = 64.0f;  // Ajusta según el tamaño real (escala * ancho)
+        // Tamaño aproximado del sprite para los límites
+        float anchoSprite = 64.0f;
 
         // Detectar tecla de ataque (A)
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
-            int daño = ray->golpearConBaston();  // Llamamos directamente a golpearConBaston
-            // Podríamos usar el valor de daño si fuera necesario
+            int daño = ray->golpearConBaston();
         }
 
-        // Movimiento con teclas y comprobación de límites más precisos
-        // Solo permitir movimiento si no está atacando
+        // Movimiento de Ray con comprobación de límites
         if (!ray->estaAtacando()) {
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
                 // Solo permitir movimiento si no toca el borde izquierdo
@@ -70,14 +80,20 @@ int main() {
             }
         }
 
-        // Actualiza animación y física
+        // Actualizar estados de los personajes
         ray->actualizar();
+        hormigaNormal->actualizar();
 
-        ventana.clear();
+        // Renderizado
+        ventana.clear(); // Fondo negro
         ray->dibujar(ventana);
+        hormigaNormal->dibujar(ventana);
         ventana.display();
     }
 
-    delete ray; // Liberar memoria al finalizar
+    // Liberar memoria
+    delete ray;
+    delete hormigaNormal;
+
     return 0;
 }

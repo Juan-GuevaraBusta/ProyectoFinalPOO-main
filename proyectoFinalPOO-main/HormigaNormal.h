@@ -44,6 +44,10 @@ public:
     sf::Vector2f getPosicion() const { return sprite.getPosition(); }
     bool estaEnAire() const { return enAire; }
     bool estaMirandoDerecha() const { return mirandoDerecha; }
+    float getAlturaSuelo() const { return alturaSuelo; }
+
+    // Setter adicional para la posición
+    void setPosicion(float x, float y) { sprite.setPosition(x, y); }
 
     // Métodos para cargar texturas (protegidos para que las subclases puedan usarlos)
 protected:

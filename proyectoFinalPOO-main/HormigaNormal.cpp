@@ -10,8 +10,8 @@ HormigaNormal::HormigaNormal(std::string nombre, int vitalidad, int alimento, st
     texturasIzquierda.resize(2);
 
     // Cargar texturas por defecto (para hormigas normales)
-    cargarTexturasDerecha("ray/raysano/RSright_1.png", "ray/raysano/RSright_2.png");
-    cargarTexturasIzquierda("ray/raysano/RSleft_1.png", "ray/raysano/RSleft_2.png");
+    cargarTexturasDerecha("ant_right_1.png", "ant_right_2.png");
+    cargarTexturasIzquierda("ant_left_1.png", "ant_left_2.png");
 
     // Utilizamos la textura derecha como inicial
     sprite.setTexture(texturasDerecha[0]);
@@ -24,13 +24,13 @@ HormigaNormal::~HormigaNormal() {
 
 void HormigaNormal::cargarTexturasDerecha(const std::string& ruta1, const std::string& ruta2) {
     if (!texturasDerecha[0].loadFromFile(ruta1) || !texturasDerecha[1].loadFromFile(ruta2)) {
-        std::cerr << "Error cargando imágenes derecha" << std::endl;
+        std::cerr << "Error cargando imágenes derecha: " << ruta1 << ", " << ruta2 << std::endl;
     }
 }
 
 void HormigaNormal::cargarTexturasIzquierda(const std::string& ruta1, const std::string& ruta2) {
     if (!texturasIzquierda[0].loadFromFile(ruta1) || !texturasIzquierda[1].loadFromFile(ruta2)) {
-        std::cerr << "Error cargando imágenes izquierda" << std::endl;
+        std::cerr << "Error cargando imágenes izquierda: " << ruta1 << ", " << ruta2 << std::endl;
     }
 }
 

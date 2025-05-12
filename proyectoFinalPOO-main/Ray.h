@@ -4,38 +4,68 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include "Jugador.h"
-#include "HormigaNormal.h"
+#include "Personaje.h"
 
-class Ray : public HormigaNormal, public Jugador {
+// Importante: Ya NO heredamos de HormigaNormal, sólo de Personaje
+class Ray : public Personaje, public Jugador {
 private:
-    int luz;
+    // Ahora definimos todos estos miembros propios
+    sf::Sprite sprite;
+    std::vector<sf::Texture> texturasDerecha;
+    std::vector<sf::Texture> texturasIzquierda;
+    std::vector<sf::Texture> texturasFrontal;
     std::vector<sf::Texture> texturasAtaque;
-    std::vector<sf::Texture> texturasFrontal;  // Específica para Ray
+
+    int frameActual = 0;
+    bool moviendoDerecha = false;
+    bool moviendoIzquierda = false;
+    bool enMovimiento = false;
+    bool mirandoDerecha = true;
     bool atacando = false;
+
+    sf::Clock relojAnimacion;
     sf::Clock relojAtaque;
+
+    // Variables para el salto
+    float velocidadY = 0.0f;
+    float gravedad = 0.015f;
+    bool enAire = false;
+    float alturaSuelo = 150.0f;
+
+    int luz;
 
 public:
     Ray(std::string nombreJugador);
-    virtual ~Ray() override;
+    virtual ~Ray();
+
+    // Métodos de movimiento (ahora propios)
+    void caminarAdelante();
+    void caminarAtras();
+    void detener();
+    void saltar();
 
     // Métodos de ataque específicos de Ray
     int golpearConBaston();
     int golpearConLuz();
     int superGolpeDeLuz();
 
-    // Getters y setters para luz
+    // Getters y setters
     void setLuz(int luz);
     int getLuz();
-
-    // Sobrescribir el método actualizar para incluir las animaciones de ataque
-    virtual void actualizar() override;
-
-    // Método para verificar si está atacando
+    sf::Vector2f getPosicion() const { return sprite.getPosition(); }
+    bool estaEnAire() const { return enAire; }
+    bool estaMirandoDerecha() const { return mirandoDerecha; }
     bool estaAtacando() const { return atacando; }
+    float getAlturaSuelo() const { return alturaSuelo; }
+    void setPosicion(float x, float y) { sprite.setPosition(x, y); }
 
-protected:
-    // Método para cargar texturas frontales (específico de Ray)
-    void cargarTexturasFrontales(const std::string& ruta1, const std::string& ruta2);
+    // Métodos para actualizar y dibujar
+    void actualizar();
+    void dibujar(sf::RenderWindow& ventana);
+
+private:
+    // Métodos auxiliares privados para cargar texturas
+    void cargarTexturas();
 };
 
 #endif
