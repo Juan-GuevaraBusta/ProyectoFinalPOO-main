@@ -1,5 +1,7 @@
 #include "Ray.h"
+#include "HormigaInfectada.h"
 #include <iostream>
+#include <cmath>  // Para sqrt en cálculo de distancia
 
 Ray::Ray(std::string nombreJugador) : Personaje("Ray", 3, 0, {0, 0}), Jugador(nombreJugador) {
     this->luz = 0;
@@ -53,7 +55,7 @@ void Ray::caminarAdelante() {
     moviendoIzquierda = false;
     mirandoDerecha = true;
     enMovimiento = true;
-    sprite.move(0.9f, 0.f);
+    sprite.move(1.0f, 0.f);
 }
 
 void Ray::caminarAtras() {
@@ -61,7 +63,7 @@ void Ray::caminarAtras() {
     moviendoIzquierda = true;
     mirandoDerecha = false;
     enMovimiento = true;
-    sprite.move(-0.9f, 0.f);
+    sprite.move(-1.0f, 0.f);
 }
 
 void Ray::detener() {
@@ -81,9 +83,30 @@ int Ray::golpearConBaston() {
     if (!atacando) {
         atacando = true;
         relojAtaque.restart();
-        return 1;
+        return 1; // Valor de daño básico
     }
-    return 0;
+    return 0; // No hace daño si ya estaba atacando
+}
+
+bool Ray::atacarEnemigo(HormigaInfectada* enemigo) {
+    if (atacando && enemigo && enemigo->estaViva()) {
+        // Calcular distancia entre Ray y el enemigo
+        sf::Vector2f posRay = getPosicion();
+        sf::Vector2f posEnemigo = enemigo->getPosicion();
+
+        float dx = posEnemigo.x - posRay.x;
+        float dy = posEnemigo.y - posRay.y;
+        float distancia = std::sqrt(dx*dx + dy*dy);
+
+        // Verificar si está dentro del rango y en la dirección correcta
+        bool direccionCorrecta = (mirandoDerecha && dx > 0) || (!mirandoDerecha && dx < 0);
+
+        if (distancia <= rangoAtaque && direccionCorrecta) {
+            enemigo->recibirDaño(1);  // Aplicar daño al enemigo
+            return true;  // Ataque exitoso
+        }
+    }
+    return false;  // No se pudo atacar
 }
 
 int Ray::golpearConLuz() {
@@ -108,7 +131,7 @@ int Ray::getLuz() {
 void Ray::actualizar() {
     // Verificar si el ataque ha terminado
     if (atacando && relojAtaque.getElapsedTime().asSeconds() >= 0.5f) {
-        atacando = false;
+        atacando = false;  // Terminar el ataque después de 0.5 segundos
     }
 
     // Si está atacando, impedir el movimiento
@@ -125,9 +148,9 @@ void Ray::actualizar() {
         // Seleccionar la textura correcta basada en el estado
         if (atacando) {
             if (mirandoDerecha) {
-                sprite.setTexture(texturasAtaque[1]);
+                sprite.setTexture(texturasAtaque[1]);  // Ataque a la derecha
             } else {
-                sprite.setTexture(texturasAtaque[0]);
+                sprite.setTexture(texturasAtaque[0]);  // Ataque a la izquierda
             }
         } else if (moviendoDerecha) {
             sprite.setTexture(texturasDerecha[frameActual]);

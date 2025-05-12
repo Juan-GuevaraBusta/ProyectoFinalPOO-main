@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include "Ray.h"
 #include "HormigaNormal.h"
+#include "HormigaInfectada.h"
 #include <iostream>
 
 int main() {
@@ -15,18 +16,21 @@ int main() {
     // Crear una instancia de Ray
     Ray *ray = new Ray("Ray");
 
-    // Crear una instancia de HormigaNormal que aparezca a la derecha de Ray
+    // Crear una instancia de HormigaNormal
     HormigaNormal *hormigaNormal = new HormigaNormal("Hormiga", 2, 0, {0, 0});
 
-    // Posicionar la hormiga normal a 300 píxeles a la derecha
-    // Usamos la posición de Ray como referencia
+    // Crear una instancia de HormigaInfectada con solo 1 punto de vida
+    HormigaInfectada *hormigaInfectada = new HormigaInfectada("Infectada", 1, {0, 0});
+
+    // Posicionar las hormigas
     sf::Vector2f posRay = ray->getPosicion();
-    hormigaNormal->setPosicion(posRay.x + 300.0f, posRay.y - 150);
+    hormigaNormal->setPosicion(posRay.x + 300.0f, posRay.y );
+    hormigaInfectada->setPosicion(posRay.x + 500.0f, posRay.y);
 
     std::cout << "Ejecutando el juego. Controles:" << std::endl;
     std::cout << "- Flechas Izquierda/Derecha: Mover a Ray" << std::endl;
     std::cout << "- Flecha Arriba: Saltar" << std::endl;
-    std::cout << "- A: Atacar" << std::endl;
+    std::cout << "- A: Atacar (puedes eliminar a la hormiga infectada)" << std::endl;
     std::cout << "- Escape: Salir" << std::endl;
 
     // Bucle principal del juego
@@ -50,7 +54,6 @@ int main() {
 
         // Por defecto los personajes están quietos
         ray->detener();
-        hormigaNormal->detener();
 
         // Obtener la posición actual de Ray
         sf::Vector2f posicion = ray->getPosicion();
@@ -61,19 +64,27 @@ int main() {
         // Detectar tecla de ataque (A)
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
             int daño = ray->golpearConBaston();
+
+            // Intentar atacar a la hormiga infectada si se inició un ataque
+            if (daño > 0) {
+                if (ray->atacarEnemigo(hormigaInfectada)) {
+                    std::cout << "¡Has golpeado a la hormiga infectada!" << std::endl;
+                    if (!hormigaInfectada->estaViva()) {
+                        std::cout << "¡La hormiga infectada ha sido derrotada!" << std::endl;
+                    }
+                }
+            }
         }
 
-        // Movimiento de Ray con comprobación de límites
+        // Movimiento con teclas y comprobación de límites
         if (!ray->estaAtacando()) {
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-                // Solo permitir movimiento si no toca el borde izquierdo
                 if (posicion.x > limiteIzquierdo + 5.0f) {
                     ray->caminarAtras();
                 }
             }
 
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-                // Solo permitir movimiento si no toca el borde derecho
                 if (posicion.x < limiteDerecho - anchoSprite - 5.0f) {
                     ray->caminarAdelante();
                 }
@@ -83,17 +94,20 @@ int main() {
         // Actualizar estados de los personajes
         ray->actualizar();
         hormigaNormal->actualizar();
+        hormigaInfectada->actualizar();  // Incluso si está muerta, actualiza (pero no se moverá)
 
         // Renderizado
         ventana.clear(); // Fondo negro
         ray->dibujar(ventana);
         hormigaNormal->dibujar(ventana);
+        hormigaInfectada->dibujar(ventana);  // Siempre dibuja, viva o muerta
         ventana.display();
     }
 
     // Liberar memoria
     delete ray;
     delete hormigaNormal;
+    delete hormigaInfectada;
 
     return 0;
 }

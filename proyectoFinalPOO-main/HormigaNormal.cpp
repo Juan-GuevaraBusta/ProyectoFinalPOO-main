@@ -15,7 +15,7 @@ HormigaNormal::HormigaNormal(std::string nombre, int vitalidad, int alimento, st
 
     // Utilizamos la textura derecha como inicial
     sprite.setTexture(texturasDerecha[0]);
-    sprite.setPosition(100.f, alturaSuelo);
+    sprite.setPosition(posicion[0], posicion[1]);
     sprite.setScale(2.0f, 2.0f);
 }
 

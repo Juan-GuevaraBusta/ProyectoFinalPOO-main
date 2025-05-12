@@ -6,10 +6,13 @@
 #include "Jugador.h"
 #include "Personaje.h"
 
-// Importante: Ya NO heredamos de HormigaNormal, sólo de Personaje
+// Clase forward declaration para evitar inclusión circular
+class HormigaInfectada;
+
+// Clase Ray (no hereda de HormigaNormal)
 class Ray : public Personaje, public Jugador {
 private:
-    // Ahora definimos todos estos miembros propios
+    // Miembros propios
     sf::Sprite sprite;
     std::vector<sf::Texture> texturasDerecha;
     std::vector<sf::Texture> texturasIzquierda;
@@ -32,13 +35,16 @@ private:
     bool enAire = false;
     float alturaSuelo = 150.0f;
 
+    // Rango de ataque
+    float rangoAtaque = 50.0f;
+
     int luz;
 
 public:
     Ray(std::string nombreJugador);
     virtual ~Ray();
 
-    // Métodos de movimiento (ahora propios)
+    // Métodos de movimiento
     void caminarAdelante();
     void caminarAtras();
     void detener();
@@ -46,6 +52,7 @@ public:
 
     // Métodos de ataque específicos de Ray
     int golpearConBaston();
+    bool atacarEnemigo(HormigaInfectada* enemigo);  // Atacar específicamente a hormiga infectada
     int golpearConLuz();
     int superGolpeDeLuz();
 
