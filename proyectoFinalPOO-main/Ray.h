@@ -14,7 +14,7 @@ class HormigaInfectada;
 class Ray : public Personaje, public Jugador {
 private:
     // Miembros propios
-    sf::Sprite sprite;
+
     std::vector<sf::Texture> texturasDerecha;
     std::vector<sf::Texture> texturasIzquierda;
     std::vector<sf::Texture> texturasFrontal;
@@ -31,8 +31,8 @@ private:
     sf::Clock relojAtaque;
 
     // Variables para el salto
-    float velocidadY = 0.0f;
-    float gravedad = 0.015f;
+    float velocidadY = 20000.0f;
+    float gravedad = 1.0f;
     bool enAire = false;
     float alturaSuelo = 750.0f;
 
@@ -44,6 +44,7 @@ private:
 public:
     Ray(std::string nombreJugador);
     virtual ~Ray();
+    sf::Sprite sprite;
 
     // Métodos de movimiento
     void caminarAdelante();

@@ -99,51 +99,115 @@ void HormigaInfectada::actualizar(Escenario* escenario) {
         relojAnimacion.restart();
     }
 
+    // Guardar la posición actual para restaurarla en caso de colisión
+    sf::Vector2f posicionAnterior = sprite.getPosition();
+
     // Realizar movimiento errático
     caminarErraticamente();
 
-    // Física para caer por gravedad y colisiones con plataformas
+    // Vector de velocidad actual (para colisiones)
+    sf::Vector2f velocidadActual(velocidad * direccionActual, velocidadY);
+
+    // Física para caer por gravedad
     if (enAire) {
         // Aplicar gravedad
         velocidadY += gravedad;
+        velocidadActual.y = velocidadY;
 
         // Mover verticalmente
         sprite.move(0, velocidadY);
+    }
 
-        // Verificar si tocó el suelo o una plataforma
-        if (escenario) {
-            // Obtener posición actual
-            sf::Vector2f posicion = sprite.getPosition();
+    // Verificar colisiones con plataformas
+    if (escenario) {
+        sf::FloatRect objetoBounds = sprite.getGlobalBounds();
+        ColisionInfo info = escenario->verificarColisionConPlataformas(objetoBounds, velocidadActual);
 
-            // Verificar colisión con plataformas
-            float alturaPlatforma = escenario->getAlturaPlatformaEn(posicion.x);
+        if (info.colision) {
+            switch (info.tipo) {
+                case ColisionTipo::ARRIBA:
+                    // Colisión con la parte superior de una plataforma (hormiga saltando)
+                    sprite.setPosition(posicionAnterior.x, info.plataformaBounds.top + info.plataformaBounds.height + 1.0f);
+                    velocidadY = 0.1f; // Rebote pequeño
+                    break;
 
-            // Si está por debajo de alguna plataforma
-            if (posicion.y >= alturaPlatforma - sprite.getGlobalBounds().height) {
-                // Reposicionar sobre la plataforma
-                sprite.setPosition(posicion.x, alturaPlatforma - sprite.getGlobalBounds().height);
-                velocidadY = 0;
-                enAire = false;
+                case ColisionTipo::ABAJO:
+                    // Colisión con la parte inferior de una plataforma (hormiga cayendo)
+                    sprite.setPosition(posicionAnterior.x, info.plataformaBounds.top - objetoBounds.height);
+                    velocidadY = 0.0f;
+                    enAire = false;
+                    break;
+
+                case ColisionTipo::IZQUIERDA:
+                    // Colisión con el lado izquierdo de una plataforma
+                    sprite.setPosition(info.plataformaBounds.left - objetoBounds.width, posicionAnterior.y);
+                    // Cambiar dirección al chocar
+                    direccionActual = -1;
+                    moviendoDerecha = false;
+                    break;
+
+                case ColisionTipo::DERECHA:
+                    // Colisión con el lado derecho de una plataforma
+                    sprite.setPosition(info.plataformaBounds.left + info.plataformaBounds.width, posicionAnterior.y);
+                    // Cambiar dirección al chocar
+                    direccionActual = 1;
+                    moviendoDerecha = true;
+                    break;
+
+                default:
+                    break;
+            }
+        } else {
+            // No hay colisión directa, verificar si debe caer
+            bool enPlataforma = false;
+            float alturaPlatforma = escenario->getAlturaPlatformaEn(
+                sprite.getPosition().x + sprite.getGlobalBounds().width / 2,
+                sprite.getPosition().y,
+                sprite.getGlobalBounds().height,
+                enPlataforma
+            );
+
+            // Si no está en el aire ni en una plataforma, debe caer
+            if (!enAire && !enPlataforma && sprite.getPosition().y + sprite.getGlobalBounds().height < alturaPlatforma) {
+                enAire = true;
+                velocidadY = 0.1f; // Velocidad inicial pequeña
+            }
+
+            // Si está en el aire y ha llegado al suelo o una plataforma
+            if (enAire) {
+                if (sprite.getPosition().y + sprite.getGlobalBounds().height >= alturaPlatforma) {
+                    // Aterrizó en una plataforma o en el suelo
+                    sprite.setPosition(sprite.getPosition().x, alturaPlatforma - sprite.getGlobalBounds().height);
+                    velocidadY = 0.0f;
+                    enAire = false;
+                }
             }
         }
 
-        // Verificar si tocó el suelo
-        if (sprite.getPosition().y >= alturaSuelo) {
-            // Reposicionar en el suelo exactamente
-            sprite.setPosition(sprite.getPosition().x, alturaSuelo);
-            velocidadY = 0;
-            enAire = false;
-        }
-    } else if (escenario) {
-        // Si no está en el aire, verificar si hay plataforma debajo
-        sf::Vector2f posicion = sprite.getPosition();
-        float alturaPlatforma = escenario->getAlturaPlatformaEn(posicion.x);
+        // Verificar límites del escenario
+        sf::Vector2f pos = sprite.getPosition();
 
-        // Si no hay plataforma debajo (está en el borde)
-        if (posicion.y < alturaPlatforma - sprite.getGlobalBounds().height &&
-            posicion.y < alturaSuelo - 1.0f) {
-            enAire = true;  // Comenzar a caer
-            velocidadY = 0.1f;  // Velocidad inicial pequeña
+        // Límite izquierdo
+        if (pos.x < escenario->getLimiteIzquierdo()) {
+            sprite.setPosition(escenario->getLimiteIzquierdo(), pos.y);
+            // Cambiar dirección
+            direccionActual = 1;
+            moviendoDerecha = true;
+        }
+
+        // Límite derecho (considerando el ancho del sprite)
+        if (pos.x + sprite.getGlobalBounds().width > escenario->getLimiteDerecho()) {
+            sprite.setPosition(escenario->getLimiteDerecho() - sprite.getGlobalBounds().width, pos.y);
+            // Cambiar dirección
+            direccionActual = -1;
+            moviendoDerecha = false;
+        }
+
+        // Límite inferior (suelo)
+        if (pos.y + sprite.getGlobalBounds().height > escenario->getAlturaSuelo()) {
+            sprite.setPosition(pos.x, escenario->getAlturaSuelo() - sprite.getGlobalBounds().height);
+            velocidadY = 0.0f;
+            enAire = false;
         }
     }
 }

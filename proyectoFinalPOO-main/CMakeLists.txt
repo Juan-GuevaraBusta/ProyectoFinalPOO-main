@@ -33,6 +33,8 @@ add_executable(practica_sfml
         Juego.h
         Escenario.cpp
         Escenario.h
+        Collider.cpp
+        Collider.h
 )
 
 target_link_libraries(practica_sfml

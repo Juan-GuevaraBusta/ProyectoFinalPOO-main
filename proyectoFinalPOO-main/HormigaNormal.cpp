@@ -6,12 +6,11 @@ HormigaNormal::HormigaNormal() {
 
 HormigaNormal::HormigaNormal(std::string nombre, int vitalidad, int alimento, std::vector<int> posicion) : Personaje(nombre, vitalidad, alimento, posicion) {
     // Reservar espacio para las texturas
-    texturasDerecha.resize(2);
-    texturasIzquierda.resize(2);
+    //texturasDerecha.resize(2);
+    //texturasIzquierda.resize(2);
 
-    // Cargar texturas por defecto (para hormigas normales)
-    cargarTexturasDerecha("ant_right_1.png", "ant_right_2.png");
-    cargarTexturasIzquierda("ant_left_1.png", "ant_left_2.png");
+    // Cargar texturas
+    cargarTexturas();
 
     // Utilizamos la textura derecha como inicial
     sprite.setTexture(texturasDerecha[0]);
@@ -22,15 +21,18 @@ HormigaNormal::HormigaNormal(std::string nombre, int vitalidad, int alimento, st
 HormigaNormal::~HormigaNormal() {
 }
 
-void HormigaNormal::cargarTexturasDerecha(const std::string& ruta1, const std::string& ruta2) {
-    if (!texturasDerecha[0].loadFromFile(ruta1) || !texturasDerecha[1].loadFromFile(ruta2)) {
-        std::cerr << "Error cargando imágenes derecha: " << ruta1 << ", " << ruta2 << std::endl;
+void HormigaNormal::cargarTexturas() {
+    texturasDerecha.resize(2);
+    texturasIzquierda.resize(2);
+    // Cargar texturas para hormiga normal
+    if (!texturasDerecha[0].loadFromFile("hormiga_normal/antright_1.png") ||
+        !texturasDerecha[1].loadFromFile("hormiga_normal/antright_2.png")) {
+        std::cerr << "Error cargando imágenes derecha de hormiga normal" << std::endl;
     }
-}
 
-void HormigaNormal::cargarTexturasIzquierda(const std::string& ruta1, const std::string& ruta2) {
-    if (!texturasIzquierda[0].loadFromFile(ruta1) || !texturasIzquierda[1].loadFromFile(ruta2)) {
-        std::cerr << "Error cargando imágenes izquierda: " << ruta1 << ", " << ruta2 << std::endl;
+    if (!texturasIzquierda[0].loadFromFile("hormiga_normal/antleft_1.png") ||
+        !texturasIzquierda[1].loadFromFile("hormiga_normal/antleft_2.png")) {
+        std::cerr << "Error cargando imágenes izquierda de hormiga normal" << std::endl;
     }
 }
 
@@ -86,49 +88,130 @@ void HormigaNormal::actualizar(Escenario* escenario) {
         relojAnimacion.restart();
     }
 
+    // Guardar la posición actual para restaurarla en caso de colisión
+    sf::Vector2f posicionAnterior = sprite.getPosition();
+    sf::Vector2f velocidadActual(0.0f, velocidadY);
+
     // Física del salto
     if (enAire) {
         // Aplicar gravedad
         velocidadY += gravedad;
+        velocidadActual.y = velocidadY;
 
         // Mover verticalmente
         sprite.move(0, velocidadY);
+    }
 
-        // Verificar si tocó el suelo o una plataforma
-        if (escenario) {
-            // Obtener posición actual
-            sf::Vector2f posicion = sprite.getPosition();
+    // Verificar colisiones con plataformas
+    if (escenario) {
+        sf::FloatRect objetoBounds = sprite.getGlobalBounds();
+        ColisionInfo info = escenario->verificarColisionConPlataformas(objetoBounds, velocidadActual);
 
-            // Verificar colisión con plataformas
-            float alturaPlatforma = escenario->getAlturaPlatformaEn(posicion.x);
+        if (info.colision) {
+            switch (info.tipo) {
+                case ColisionTipo::ARRIBA:
+                    // Colisión con la parte superior de una plataforma (personaje saltando)
+                    sprite.setPosition(posicionAnterior.x, info.plataformaBounds.top + info.plataformaBounds.height + 1.0f);
+                    velocidadY = 0.1f; // Rebote pequeño
+                    break;
 
-            // Si está por debajo de alguna plataforma
-            if (posicion.y >= alturaPlatforma - sprite.getGlobalBounds().height) {
-                // Reposicionar sobre la plataforma
-                sprite.setPosition(posicion.x, alturaPlatforma - sprite.getGlobalBounds().height);
-                velocidadY = 0;
-                enAire = false;
+                case ColisionTipo::ABAJO:
+                    // Colisión con la parte inferior de una plataforma (personaje cayendo)
+                    sprite.setPosition(posicionAnterior.x, info.plataformaBounds.top - objetoBounds.height);
+                    velocidadY = 0.0f;
+                    enAire = false;
+                    break;
+
+                case ColisionTipo::IZQUIERDA:
+                    // Colisión con el lado izquierdo de una plataforma
+                    sprite.setPosition(info.plataformaBounds.left - objetoBounds.width, posicionAnterior.y);
+                    break;
+
+                case ColisionTipo::DERECHA:
+                    // Colisión con el lado derecho de una plataforma
+                    sprite.setPosition(info.plataformaBounds.left + info.plataformaBounds.width, posicionAnterior.y);
+                    break;
+
+                default:
+                    break;
+            }
+        } else {
+            // No hay colisión directa, verificar si debe caer
+            bool enPlataforma = false;
+            float alturaPlatforma = escenario->getAlturaPlatformaEn(
+                sprite.getPosition().x + sprite.getGlobalBounds().width / 2,
+                sprite.getPosition().y,
+                sprite.getGlobalBounds().height,
+                enPlataforma
+            );
+
+            // Si no está en el aire ni en una plataforma, debe caer
+            if (!enAire && !enPlataforma && sprite.getPosition().y + sprite.getGlobalBounds().height < alturaPlatforma) {
+                enAire = true;
+                velocidadY = 0.1f; // Velocidad inicial pequeña
+            }
+
+            // Si está en el aire y ha llegado al suelo o una plataforma
+            if (enAire) {
+                if (sprite.getPosition().y + sprite.getGlobalBounds().height >= alturaPlatforma) {
+                    // Aterrizó en una plataforma o en el suelo
+                    sprite.setPosition(sprite.getPosition().x, alturaPlatforma - sprite.getGlobalBounds().height);
+                    velocidadY = 0.0f;
+                    enAire = false;
+                }
             }
         }
 
-        // Verificar si tocó el suelo
-        if (sprite.getPosition().y >= alturaSuelo) {
-            // Reposicionar en el suelo exactamente
-            sprite.setPosition(sprite.getPosition().x, alturaSuelo);
-            velocidadY = 0;
+        // Verificar límites del escenario
+        sf::Vector2f pos = sprite.getPosition();
+
+        // Límite izquierdo
+        if (pos.x < escenario->getLimiteIzquierdo()) {
+            sprite.setPosition(escenario->getLimiteIzquierdo(), pos.y);
+        }
+
+        // Límite derecho (considerando el ancho del sprite)
+        if (pos.x + sprite.getGlobalBounds().width > escenario->getLimiteDerecho()) {
+            sprite.setPosition(escenario->getLimiteDerecho() - sprite.getGlobalBounds().width, pos.y);
+        }
+
+        // Límite superior
+        if (pos.y < escenario->getLimiteSuperior()) {
+            sprite.setPosition(pos.x, escenario->getLimiteSuperior());
+            velocidadY = 0.1f; // Para que comience a caer
+        }
+
+        // Límite inferior (suelo)
+        if (pos.y + sprite.getGlobalBounds().height > escenario->getAlturaSuelo()) {
+            sprite.setPosition(pos.x, escenario->getAlturaSuelo() - sprite.getGlobalBounds().height);
+            velocidadY = 0.0f;
             enAire = false;
         }
-    } else if (escenario) {
-        // Si no está en el aire, verificar si hay plataforma debajo
-        sf::Vector2f posicion = sprite.getPosition();
-        float alturaPlatforma = escenario->getAlturaPlatformaEn(posicion.x);
+    }
+}
 
-        // Si no hay plataforma debajo (está en el borde)
-        if (posicion.y < alturaPlatforma - sprite.getGlobalBounds().height &&
-            posicion.y < alturaSuelo - 1.0f) {
-            enAire = true;  // Comenzar a caer
-            velocidadY = 0.1f;  // Velocidad inicial pequeña
-        }
+// Implementa el método para ajustar la hitbox
+void HormigaNormal::ajustarHitbox(float offsetX, float offsetY, float width, float height) {
+    hitboxOffsetX = offsetX;
+    hitboxOffsetY = offsetY;
+    hitboxWidth = width;
+    hitboxHeight = height;
+    usingCustomHitbox = true;
+}
+
+// Sobrescribe getBounds para usar los valores personalizados
+sf::FloatRect HormigaNormal::getBounds() const {
+    if (usingCustomHitbox) {
+        // Retornar hitbox personalizada
+        return sf::FloatRect(
+            sprite.getPosition().x + hitboxOffsetX,
+            sprite.getPosition().y + hitboxOffsetY,
+            hitboxWidth,
+            hitboxHeight
+        );
+    } else {
+        // Retornar hitbox por defecto (la del sprite)
+        return sprite.getGlobalBounds();
     }
 }
 

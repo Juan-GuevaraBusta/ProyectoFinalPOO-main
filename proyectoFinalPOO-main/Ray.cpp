@@ -11,6 +11,7 @@ Ray::Ray(std::string nombreJugador) : Personaje("Ray", 3, 0, {0, 0}), Jugador(no
 
     // Configurar el sprite inicialmente
     sprite.setTexture(texturasFrontal[0]);
+    sprite.setTextureRect(sf::IntRect(3, 3, 26, 20));
     sprite.setPosition(100.f, alturaSuelo);
     sprite.setScale(2.0f, 2.0f);
 }
@@ -55,7 +56,7 @@ void Ray::caminarAdelante() {
     moviendoIzquierda = false;
     mirandoDerecha = true;
     enMovimiento = true;
-    sprite.move(1.0f, 0.f);
+    sprite.move(3.0f, 0.f);
 }
 
 void Ray::caminarAtras() {
@@ -63,7 +64,7 @@ void Ray::caminarAtras() {
     moviendoIzquierda = true;
     mirandoDerecha = false;
     enMovimiento = true;
-    sprite.move(-1.0f, 0.f);
+    sprite.move(-3.0f, 0.f);
 }
 
 void Ray::detener() {
@@ -74,7 +75,7 @@ void Ray::detener() {
 
 void Ray::saltar() {
     if (!enAire) {
-        velocidadY = -2.0f;
+        velocidadY = -15.0f;
         enAire = true;
     }
 }
@@ -129,6 +130,9 @@ int Ray::getLuz() {
 }
 
 void Ray::actualizar(Escenario* escenario) {
+    // Velocidad constante para movimiento horizontal
+    float velocidadX = 3.0f;
+
     // Verificar si el ataque ha terminado
     if (atacando && relojAtaque.getElapsedTime().asSeconds() >= 0.5f) {
         atacando = false;  // Terminar el ataque después de 0.5 segundos
@@ -141,8 +145,8 @@ void Ray::actualizar(Escenario* escenario) {
         enMovimiento = false;
     }
 
-    // Cambiar frame cada 0.15 segundos
-    if (relojAnimacion.getElapsedTime().asSeconds() >= 0.15f) {
+    // Cambiar frame cada 0.15 segundos para animación
+    if (relojAnimacion.getElapsedTime().asSeconds() >= 0.1f) {
         frameActual = (frameActual + 1) % 2;
 
         // Seleccionar la textura correcta basada en el estado
@@ -163,56 +167,124 @@ void Ray::actualizar(Escenario* escenario) {
         relojAnimacion.restart();
     }
 
-    // *** CAMBIO 5: Modificar la física para asegurar que Ray esté siempre en el suelo o plataforma ***
-    float suelo = alturaSuelo;  // Por defecto usamos el suelo de Ray
+    // Guardar la posición actual para restaurarla en caso de colisión
+    sf::Vector2f posicionAnterior = sprite.getPosition();
 
-    // Si tenemos un escenario, usar su altura de suelo
-    if (escenario) {
-        suelo = escenario->getAlturaSuelo();
-
-        // Obtener posición actual
-        sf::Vector2f posicion = sprite.getPosition();
-
-        // Verificar colisión con plataformas
-        float alturaPlatforma = escenario->getAlturaPlatformaEn(posicion.x);
-
-        // Usar la plataforma como suelo si estamos sobre ella
-        if (alturaPlatforma < suelo) {
-            suelo = alturaPlatforma;
-        }
-    }
-
-    // Física del salto y gravedad
+    // PARTE 1: MOVIMIENTO VERTICAL (GRAVEDAD Y SALTO)
     if (enAire) {
         // Aplicar gravedad
         velocidadY += gravedad;
 
+        // Guardar posición antes del movimiento vertical
+        float posYAnterior = sprite.getPosition().y;
+
         // Mover verticalmente
         sprite.move(0, velocidadY);
 
-        // Verificar si tocó el suelo o plataforma
-        if (sprite.getPosition().y >= suelo - sprite.getGlobalBounds().height) {
-            // Reposicionar exactamente sobre el suelo o plataforma
-            sprite.setPosition(sprite.getPosition().x, suelo - sprite.getGlobalBounds().height);
-            velocidadY = 0;
-            enAire = false;
-        }
-    } else {
-        // Si no está en el aire, verificar si debería caer
-        sf::Vector2f posicion = sprite.getPosition();
-        float alturaSuelo = suelo;
-
+        // Verificar colisiones verticales si hay escenario
         if (escenario) {
-            alturaSuelo = escenario->getAlturaPlatformaEn(posicion.x);
+            sf::FloatRect objetoBounds = sprite.getGlobalBounds();
+
+            // Verificar colisión después del movimiento vertical
+            ColisionInfo infoVertical = escenario->verificarColisionConPlataformas(
+                objetoBounds,
+                sf::Vector2f(0.0f, velocidadY)
+            );
+
+            if (infoVertical.colision) {
+                if (infoVertical.tipo == ColisionTipo::ABAJO) {
+                    // Cayendo y colisiona con plataforma - aterrizaje
+                    sprite.setPosition(sprite.getPosition().x, infoVertical.plataformaBounds.top - objetoBounds.height);
+                    velocidadY = 0.0f;
+                    enAire = false;
+                }
+                else if (infoVertical.tipo == ColisionTipo::ARRIBA) {
+                    // Saltando y golpea el techo
+                    sprite.setPosition(sprite.getPosition().x, infoVertical.plataformaBounds.top + infoVertical.plataformaBounds.height);
+                    velocidadY = 0.1f; // Pequeño rebote
+                }
+            }
+        }
+    }
+
+    // PARTE 2: MOVIMIENTO HORIZONTAL (IZQUIERDA/DERECHA)
+    // Primero aplicamos el movimiento
+    if (moviendoDerecha) {
+        sprite.move(velocidadX, 0);
+    }
+    else if (moviendoIzquierda) {
+        sprite.move(-velocidadX, 0);
+    }
+
+    // Después verificamos colisiones horizontales
+    if ((moviendoDerecha || moviendoIzquierda) && escenario) {
+        sf::FloatRect objetoBounds = sprite.getGlobalBounds();
+        sf::Vector2f velocidadActual(moviendoDerecha ? velocidadX : -velocidadX, 0);
+
+        ColisionInfo infoHorizontal = escenario->verificarColisionConPlataformas(
+            objetoBounds,
+            velocidadActual
+        );
+
+        if (infoHorizontal.colision) {
+            // Si hay colisión horizontal, simplemente restauramos la posición X anterior
+            // No importa si es izquierda o derecha, solo no permitimos el movimiento
+            sprite.setPosition(posicionAnterior.x, sprite.getPosition().y);
+
+
+        }
+    }
+
+    // PARTE 3: VERIFICAR SI DEBE CAER
+    if (escenario) {
+        bool enPlataforma = false;
+        float alturaPlatforma = escenario->getAlturaPlatformaEn(
+            sprite.getPosition().x + sprite.getGlobalBounds().width / 2,
+            sprite.getPosition().y,
+            sprite.getGlobalBounds().height,
+            enPlataforma
+        );
+
+        // Si no está en el aire ni en una plataforma, debe caer
+        if (!enAire && !enPlataforma && sprite.getPosition().y + sprite.getGlobalBounds().height < alturaPlatforma) {
+            enAire = true;
+            velocidadY = 0.1f; // Velocidad inicial pequeña
         }
 
-        // Si está por encima del suelo (cayendo)
-        if (posicion.y < alturaSuelo - sprite.getGlobalBounds().height - 1.0f) {
-            enAire = true;
-            velocidadY = 0.1f;  // Iniciar caída
-        } else {
-            // Asegurar que siempre esté exactamente en el suelo o plataforma
-            sprite.setPosition(posicion.x, alturaSuelo - sprite.getGlobalBounds().height);
+        // Si está en el aire y ha llegado al suelo o una plataforma
+        if (enAire) {
+            if (sprite.getPosition().y + sprite.getGlobalBounds().height >= alturaPlatforma) {
+                // Aterrizó en una plataforma o en el suelo
+                sprite.setPosition(sprite.getPosition().x, alturaPlatforma - sprite.getGlobalBounds().height);
+                velocidadY = 0.0f;
+                enAire = false;
+            }
+        }
+
+        // PARTE 4: LIMITES DEL ESCENARIO
+        sf::Vector2f pos = sprite.getPosition();
+
+        // Límite izquierdo
+        if (pos.x < escenario->getLimiteIzquierdo()) {
+            sprite.setPosition(escenario->getLimiteIzquierdo(), pos.y);
+        }
+
+        // Límite derecho (considerando el ancho del sprite)
+        if (pos.x + sprite.getGlobalBounds().width > escenario->getLimiteDerecho()) {
+            sprite.setPosition(escenario->getLimiteDerecho() - sprite.getGlobalBounds().width, pos.y);
+        }
+
+        // Límite superior
+        if (pos.y < escenario->getLimiteSuperior()) {
+            sprite.setPosition(pos.x, escenario->getLimiteSuperior());
+            velocidadY = 0.1f; // Para que comience a caer
+        }
+
+        // Límite inferior (suelo)
+        if (pos.y + sprite.getGlobalBounds().height > escenario->getAlturaSuelo()) {
+            sprite.setPosition(pos.x, escenario->getAlturaSuelo() - sprite.getGlobalBounds().height);
+            velocidadY = 0.0f;
+            enAire = false;
         }
     }
 }
@@ -220,3 +292,4 @@ void Ray::actualizar(Escenario* escenario) {
 void Ray::dibujar(sf::RenderWindow& ventana) {
     ventana.draw(sprite);
 }
+

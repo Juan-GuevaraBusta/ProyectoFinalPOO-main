@@ -4,6 +4,22 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 
+// Enumeración para los tipos de colisión
+enum class ColisionTipo {
+    NINGUNA,
+    ARRIBA,    // Colisión con la parte superior de la plataforma
+    ABAJO,     // Colisión con la parte inferior de la plataforma
+    IZQUIERDA, // Colisión con el lado izquierdo de la plataforma
+    DERECHA    // Colisión con el lado derecho de la plataforma
+};
+
+// Estructura para información de colisión
+struct ColisionInfo {
+    bool colision;
+    ColisionTipo tipo;
+    sf::FloatRect plataformaBounds;
+};
+
 class Escenario {
 private:
     // Textura y sprite para el fondo
@@ -32,7 +48,12 @@ public:
 
     // Métodos para colisiones
     bool verificarColisionPlataforma(const sf::FloatRect& objetoBounds);
-    float getAlturaPlatformaEn(float posX);
+
+    // Nuevo método mejorado para verificar colisiones con plataformas
+    ColisionInfo verificarColisionConPlataformas(const sf::FloatRect& objetoBounds, const sf::Vector2f& velocidad);
+
+    // Método modificado para obtener la altura de la plataforma
+    float getAlturaPlatformaEn(float posX, float posY, float alturaObjeto, bool& enPlataforma);
 
     // Método para dibujar el escenario
     void dibujar(sf::RenderWindow& ventana);
@@ -43,6 +64,7 @@ public:
     float getLimiteSuperior() const { return limiteSuperior; }
     float getLimiteInferior() const { return limiteInferior; }
     float getAlturaSuelo() const { return alturaSuelo; }
+    const std::vector<sf::RectangleShape>& getPlataformas() const { return plataformas; }
 
     // Setters
     void configurarLimites(float izq, float der, float sup, float inf);

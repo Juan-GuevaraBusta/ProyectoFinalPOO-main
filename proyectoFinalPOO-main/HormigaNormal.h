@@ -25,6 +25,13 @@ protected:
     bool enAire = false;
     float alturaSuelo = 150.0f; // Ajustar según tamaño de ventana
 
+    // Ajustes para la hitbox de colisión
+    float hitboxOffsetX = 0.0f;
+    float hitboxOffsetY = 0.0f;
+    float hitboxWidth = 0.0f;
+    float hitboxHeight = 0.0f;
+    bool usingCustomHitbox = false;
+
 public:
     HormigaNormal();
     HormigaNormal(std::string nombre, int vitalidad, int alimento, std::vector<int> posicion);
@@ -38,7 +45,7 @@ public:
     void recibirDañoEsporas(int esporas);
 
     // Métodos para actualizar y dibujar
-    virtual void actualizar(Escenario* escenario = nullptr);  // Modificado para recibir escenario
+    virtual void actualizar(Escenario* escenario = nullptr);
     void dibujar(sf::RenderWindow& ventana);
 
     // Getters
@@ -46,14 +53,18 @@ public:
     bool estaEnAire() const { return enAire; }
     bool estaMirandoDerecha() const { return mirandoDerecha; }
     float getAlturaSuelo() const { return alturaSuelo; }
-    sf::FloatRect getBounds() const { return sprite.getGlobalBounds(); }
+
+    // Sobrescribir getBounds para usar hitbox personalizada
+    sf::FloatRect getBounds() const;
 
     // Setter adicional para la posición
     void setPosicion(float x, float y) { sprite.setPosition(x, y); }
 
-    // Métodos para cargar texturas (protegidos para que las subclases puedan usarlos)
+    // Método para ajustar la hitbox de colisión
+    void ajustarHitbox(float offsetX, float offsetY, float width, float height);
+
 protected:
-    void cargarTexturasDerecha(const std::string& ruta1, const std::string& ruta2);
-    void cargarTexturasIzquierda(const std::string& ruta1, const std::string& ruta2);
+    // Método unificado para cargar texturas (como en HormigaInfectada)
+    virtual void cargarTexturas();
 };
 #endif //HORMIGANORMAL_H
