@@ -1,13 +1,17 @@
 #ifndef HORMIGANORMAL_H
 #define HORMIGANORMAL_H
 #include "Personaje.h"
-#include "Escenario.h"  // Añadir include para Escenario
+#include "Escenario.h"
+#include "Collider.h"
 #include <SFML/Graphics.hpp>
 #include <vector>
 
 class HormigaNormal : public Personaje {
 protected:
     sf::Sprite sprite;
+    sf::RectangleShape hitbox;  // Hitbox para colisiones
+    Collider* collider;         // Collider para el sistema AABB
+
     std::vector<sf::Texture> texturasDerecha;
     std::vector<sf::Texture> texturasIzquierda;
 
@@ -53,12 +57,13 @@ public:
     bool estaEnAire() const { return enAire; }
     bool estaMirandoDerecha() const { return mirandoDerecha; }
     float getAlturaSuelo() const { return alturaSuelo; }
+    Collider* getCollider() const { return collider; }
 
     // Sobrescribir getBounds para usar hitbox personalizada
     sf::FloatRect getBounds() const;
 
     // Setter adicional para la posición
-    void setPosicion(float x, float y) { sprite.setPosition(x, y); }
+    void setPosicion(float x, float y);
 
     // Método para ajustar la hitbox de colisión
     void ajustarHitbox(float offsetX, float offsetY, float width, float height);
@@ -66,5 +71,8 @@ public:
 protected:
     // Método unificado para cargar texturas (como en HormigaInfectada)
     virtual void cargarTexturas();
+
+    // Método para actualizar la posición de la hitbox
+    void actualizarHitbox();
 };
 #endif //HORMIGANORMAL_H

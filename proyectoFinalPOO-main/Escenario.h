@@ -3,22 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <vector>
-
-// Enumeración para los tipos de colisión
-enum class ColisionTipo {
-    NINGUNA,
-    ARRIBA,    // Colisión con la parte superior de la plataforma
-    ABAJO,     // Colisión con la parte inferior de la plataforma
-    IZQUIERDA, // Colisión con el lado izquierdo de la plataforma
-    DERECHA    // Colisión con el lado derecho de la plataforma
-};
-
-// Estructura para información de colisión
-struct ColisionInfo {
-    bool colision;
-    ColisionTipo tipo;
-    sf::FloatRect plataformaBounds;
-};
+#include "Collider.h"
 
 class Escenario {
 private:
@@ -29,6 +14,9 @@ private:
 
     // Plataformas
     std::vector<sf::RectangleShape> plataformas;
+
+    // Colisionadores para las plataformas
+    std::vector<Collider*> colisionadores;
 
     // Límites del escenario
     float limiteIzquierdo;
@@ -46,14 +34,11 @@ public:
     // Método para agregar una plataforma
     void agregarPlataforma(float x, float y, float ancho, float alto);
 
-    // Métodos para colisiones
-    bool verificarColisionPlataforma(const sf::FloatRect& objetoBounds);
+    // Método para colisiones usando el sistema Collider
+    bool checkCollision(Collider& personajeCollider, sf::Vector2f& direction, float pushForce = 1.0f);
 
-    // Nuevo método mejorado para verificar colisiones con plataformas
-    ColisionInfo verificarColisionConPlataformas(const sf::FloatRect& objetoBounds, const sf::Vector2f& velocidad);
-
-    // Método modificado para obtener la altura de la plataforma
-    float getAlturaPlatformaEn(float posX, float posY, float alturaObjeto, bool& enPlataforma);
+    // Método para verificar si un punto está sobre una plataforma
+    bool estaSobrePlataforma(float posX, float posY, float altura, float& alturaPlataforma);
 
     // Método para dibujar el escenario
     void dibujar(sf::RenderWindow& ventana);

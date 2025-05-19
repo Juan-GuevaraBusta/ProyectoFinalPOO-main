@@ -1,13 +1,17 @@
 #ifndef HORMIGAINFECTADA_H
 #define HORMIGAINFECTADA_H
 #include "Personaje.h"
-#include "Escenario.h"  // Añadir include para Escenario
+#include "Escenario.h"
+#include "Collider.h"
 #include <SFML/Graphics.hpp>
 #include <vector>
 
 class HormigaInfectada : public Personaje {
 private:
     sf::Sprite sprite;
+    sf::RectangleShape hitbox;  // Hitbox para colisiones
+    Collider* collider;         // Collider para el sistema AABB
+
     std::vector<sf::Texture> texturasDerecha;
     std::vector<sf::Texture> texturasIzquierda;
     sf::Texture texturaMuerta;  // Nueva textura para cuando está muerta
@@ -39,7 +43,7 @@ public:
     void caminarErraticamente();
 
     // Métodos básicos necesarios
-    void actualizar(Escenario* escenario = nullptr);  // Modificado para recibir escenario
+    void actualizar(Escenario* escenario = nullptr);
     void dibujar(sf::RenderWindow& ventana);
     void recibirDaño(int daño);
 
@@ -48,13 +52,15 @@ public:
     bool estaViva() const { return viva; }
     bool estaEnAire() const { return enAire; }
     float getAlturaSuelo() const { return alturaSuelo; }
-    sf::FloatRect getBounds() const { return sprite.getGlobalBounds(); }
+    sf::FloatRect getBounds() const { return hitbox.getGlobalBounds(); }
+    Collider* getCollider() const { return collider; }
 
     // Setter para posición
-    void setPosicion(float x, float y) { sprite.setPosition(x, y); }
+    void setPosicion(float x, float y);
 
 private:
     void cargarTexturas();
+    void actualizarHitbox();
 };
 
 #endif //HORMIGAINFECTADA_H

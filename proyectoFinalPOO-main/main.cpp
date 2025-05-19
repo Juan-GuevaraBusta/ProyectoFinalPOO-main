@@ -15,7 +15,6 @@ int main() {
 
     // Configurar límites del escenario
     escenario.configurarLimites(0.0f, 1366.0f, 0.0f, 768.0f);
-    escenario.configurarLimites(0.0f, 1366.0f, 0.0f, 768.0f);
 
     // La altura del suelo ya se definió en el constructor (650.0f)
 
@@ -26,7 +25,7 @@ int main() {
     // Crear el resto de las hormigas y posicionarlas en el suelo
     HormigaNormal *hormigaNormal = new HormigaNormal("Hormiga", 2, 0, {0, 0});
     hormigaNormal->setPosicion(400.0f, escenario.getAlturaSuelo() - hormigaNormal->getBounds().height);
-    //hormigaNormal->ajustarHitbox(40, 40, 50.0f,   55.0f);
+    //hormigaNormal->ajustarHitbox(40, 40, 50.0f, 55.0f);
 
     HormigaInfectada *hormigaInfectada = new HormigaInfectada("Infectada", 1, {0, 0});
     hormigaInfectada->setPosicion(700.0f, escenario.getAlturaSuelo() - hormigaInfectada->getBounds().height);
@@ -128,8 +127,13 @@ int main() {
 
         // Actualizar posiciones de los rectángulos para los cuadros delimitadores
         rectRay.setPosition(ray->getBounds().left, ray->getBounds().top);
+        rectRay.setSize(sf::Vector2f(ray->getBounds().width, ray->getBounds().height));
+
         rectHormigaNormal.setPosition(hormigaNormal->getBounds().left, hormigaNormal->getBounds().top);
+        rectHormigaNormal.setSize(sf::Vector2f(hormigaNormal->getBounds().width, hormigaNormal->getBounds().height));
+
         rectHormigaInfectada.setPosition(hormigaInfectada->getBounds().left, hormigaInfectada->getBounds().top);
+        rectHormigaInfectada.setSize(sf::Vector2f(hormigaInfectada->getBounds().width, hormigaInfectada->getBounds().height));
 
         // Renderizado
         ventana.clear(); // Fondo negro

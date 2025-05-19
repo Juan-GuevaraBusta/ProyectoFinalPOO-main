@@ -6,6 +6,14 @@
 Ray::Ray(std::string nombreJugador) : Personaje("Ray", 3, 0, {0, 0}), Jugador(nombreJugador) {
     this->luz = 0;
 
+    // Inicializar hitbox y collider
+    hitbox.setSize(sf::Vector2f(45.0f, 45.0f));
+    hitbox.setFillColor(sf::Color::Transparent);
+    hitbox.setOutlineColor(sf::Color::Green);
+    hitbox.setOutlineThickness(1.0f);
+
+    collider = new Collider(hitbox);
+
     // Cargar todas las texturas
     cargarTexturas();
 
@@ -14,6 +22,9 @@ Ray::Ray(std::string nombreJugador) : Personaje("Ray", 3, 0, {0, 0}), Jugador(no
     sprite.setTextureRect(sf::IntRect(3, 3, 26, 20));
     sprite.setPosition(100.f, alturaSuelo);
     sprite.setScale(2.0f, 2.0f);
+
+    // Actualizar hitbox a la posición inicial
+    actualizarHitbox();
 }
 
 void Ray::cargarTexturas() {
@@ -48,7 +59,21 @@ void Ray::cargarTexturas() {
 }
 
 Ray::~Ray() {
+    delete collider;
     std::cout << "Ray gone" << std::endl;
+}
+
+void Ray::setPosicion(float x, float y) {
+    sprite.setPosition(x, y);
+    actualizarHitbox();
+}
+
+void Ray::actualizarHitbox() {
+    // Centrar la hitbox en el sprite
+    sf::FloatRect bounds = sprite.getGlobalBounds();
+    hitbox.setSize(sf::Vector2f(bounds.width * 0.8f, bounds.height * 0.8f));
+    hitbox.setPosition(bounds.left + bounds.width * 0.1f,
+                       bounds.top + bounds.height * 0.1f);
 }
 
 void Ray::caminarAdelante() {
@@ -56,7 +81,8 @@ void Ray::caminarAdelante() {
     moviendoIzquierda = false;
     mirandoDerecha = true;
     enMovimiento = true;
-    sprite.move(3.0f, 0.f);
+    sprite.move(1.2f, 0.f);
+    actualizarHitbox();
 }
 
 void Ray::caminarAtras() {
@@ -64,7 +90,8 @@ void Ray::caminarAtras() {
     moviendoIzquierda = true;
     mirandoDerecha = false;
     enMovimiento = true;
-    sprite.move(-3.0f, 0.f);
+    sprite.move(-1.2f, 0.f);
+    actualizarHitbox();
 }
 
 void Ray::detener() {
@@ -75,7 +102,7 @@ void Ray::detener() {
 
 void Ray::saltar() {
     if (!enAire) {
-        velocidadY = -15.0f;
+        velocidadY = -10.0f;
         enAire = true;
     }
 }
@@ -167,97 +194,81 @@ void Ray::actualizar(Escenario* escenario) {
         relojAnimacion.restart();
     }
 
-    // Guardar la posición actual para restaurarla en caso de colisión
-    sf::Vector2f posicionAnterior = sprite.getPosition();
-
     // PARTE 1: MOVIMIENTO VERTICAL (GRAVEDAD Y SALTO)
     if (enAire) {
         // Aplicar gravedad
         velocidadY += gravedad;
 
-        // Guardar posición antes del movimiento vertical
-        float posYAnterior = sprite.getPosition().y;
-
         // Mover verticalmente
         sprite.move(0, velocidadY);
-
-        // Verificar colisiones verticales si hay escenario
-        if (escenario) {
-            sf::FloatRect objetoBounds = sprite.getGlobalBounds();
-
-            // Verificar colisión después del movimiento vertical
-            ColisionInfo infoVertical = escenario->verificarColisionConPlataformas(
-                objetoBounds,
-                sf::Vector2f(0.0f, velocidadY)
-            );
-
-            if (infoVertical.colision) {
-                if (infoVertical.tipo == ColisionTipo::ABAJO) {
-                    // Cayendo y colisiona con plataforma - aterrizaje
-                    sprite.setPosition(sprite.getPosition().x, infoVertical.plataformaBounds.top - objetoBounds.height);
-                    velocidadY = 0.0f;
-                    enAire = false;
-                }
-                else if (infoVertical.tipo == ColisionTipo::ARRIBA) {
-                    // Saltando y golpea el techo
-                    sprite.setPosition(sprite.getPosition().x, infoVertical.plataformaBounds.top + infoVertical.plataformaBounds.height);
-                    velocidadY = 0.1f; // Pequeño rebote
-                }
-            }
-        }
+        actualizarHitbox();
     }
 
     // PARTE 2: MOVIMIENTO HORIZONTAL (IZQUIERDA/DERECHA)
     // Primero aplicamos el movimiento
     if (moviendoDerecha) {
         sprite.move(velocidadX, 0);
+        actualizarHitbox();
     }
     else if (moviendoIzquierda) {
         sprite.move(-velocidadX, 0);
+        actualizarHitbox();
     }
 
-    // Después verificamos colisiones horizontales
-    if ((moviendoDerecha || moviendoIzquierda) && escenario) {
-        sf::FloatRect objetoBounds = sprite.getGlobalBounds();
-        sf::Vector2f velocidadActual(moviendoDerecha ? velocidadX : -velocidadX, 0);
-
-        ColisionInfo infoHorizontal = escenario->verificarColisionConPlataformas(
-            objetoBounds,
-            velocidadActual
-        );
-
-        if (infoHorizontal.colision) {
-            // Si hay colisión horizontal, simplemente restauramos la posición X anterior
-            // No importa si es izquierda o derecha, solo no permitimos el movimiento
-            sprite.setPosition(posicionAnterior.x, sprite.getPosition().y);
-
-
-        }
-    }
-
-    // PARTE 3: VERIFICAR SI DEBE CAER
+    // Verificar colisiones con plataformas usando el sistema Collider
     if (escenario) {
-        bool enPlataforma = false;
-        float alturaPlatforma = escenario->getAlturaPlatformaEn(
-            sprite.getPosition().x + sprite.getGlobalBounds().width / 2,
-            sprite.getPosition().y,
-            sprite.getGlobalBounds().height,
-            enPlataforma
-        );
+        sf::Vector2f direction;
 
-        // Si no está en el aire ni en una plataforma, debe caer
-        if (!enAire && !enPlataforma && sprite.getPosition().y + sprite.getGlobalBounds().height < alturaPlatforma) {
-            enAire = true;
-            velocidadY = 0.1f; // Velocidad inicial pequeña
-        }
+        // Verificar colisiones usando el sistema Collider
+        bool colision = escenario->checkCollision(*collider, direction, 1.0f);
 
-        // Si está en el aire y ha llegado al suelo o una plataforma
-        if (enAire) {
-            if (sprite.getPosition().y + sprite.getGlobalBounds().height >= alturaPlatforma) {
-                // Aterrizó en una plataforma o en el suelo
-                sprite.setPosition(sprite.getPosition().x, alturaPlatforma - sprite.getGlobalBounds().height);
+        if (colision) {
+            // Actualizar la posición del sprite para que coincida con la hitbox movida por el Collider
+            sf::Vector2f hitboxPos = hitbox.getPosition();
+
+            if (direction.y < 0.0f) {
+                // Colisión desde abajo (el personaje estaba saltando)
+                velocidadY = 0.1f; // Rebote pequeño
+            }
+            else if (direction.y > 0.0f) {
+                // Colisión desde arriba (el personaje estaba cayendo)
                 velocidadY = 0.0f;
                 enAire = false;
+            }
+
+            // Ajustar la posición del sprite en función de la hitbox
+            sf::FloatRect bounds = sprite.getGlobalBounds();
+            sprite.setPosition(
+                hitboxPos.x - bounds.width * 0.1f,
+                hitboxPos.y - bounds.height * 0.1f
+            );
+        }
+        else {
+            // No hay colisión directa, verificar si debe caer
+            float alturaPlataforma;
+            sf::Vector2f pos = sprite.getPosition();
+            sf::FloatRect bounds = sprite.getGlobalBounds();
+
+            bool sobrePlataforma = escenario->estaSobrePlataforma(
+                pos.x + bounds.width / 2,
+                pos.y,
+                bounds.height,
+                alturaPlataforma
+            );
+
+            // Si no está en el aire y no está sobre una plataforma, debe caer
+            if (!enAire && !sobrePlataforma) {
+                enAire = true;
+                velocidadY = 0.1f; // Velocidad inicial pequeña
+            }
+
+            // Si está en el aire y ha llegado a una plataforma
+            if (enAire && sobrePlataforma && pos.y + bounds.height > alturaPlataforma - 5.0f) {
+                // Aterrizó en una plataforma
+                sprite.setPosition(pos.x, alturaPlataforma - bounds.height);
+                velocidadY = 0.0f;
+                enAire = false;
+                actualizarHitbox();
             }
         }
 
@@ -267,17 +278,20 @@ void Ray::actualizar(Escenario* escenario) {
         // Límite izquierdo
         if (pos.x < escenario->getLimiteIzquierdo()) {
             sprite.setPosition(escenario->getLimiteIzquierdo(), pos.y);
+            actualizarHitbox();
         }
 
         // Límite derecho (considerando el ancho del sprite)
         if (pos.x + sprite.getGlobalBounds().width > escenario->getLimiteDerecho()) {
             sprite.setPosition(escenario->getLimiteDerecho() - sprite.getGlobalBounds().width, pos.y);
+            actualizarHitbox();
         }
 
         // Límite superior
         if (pos.y < escenario->getLimiteSuperior()) {
             sprite.setPosition(pos.x, escenario->getLimiteSuperior());
             velocidadY = 0.1f; // Para que comience a caer
+            actualizarHitbox();
         }
 
         // Límite inferior (suelo)
@@ -285,11 +299,13 @@ void Ray::actualizar(Escenario* escenario) {
             sprite.setPosition(pos.x, escenario->getAlturaSuelo() - sprite.getGlobalBounds().height);
             velocidadY = 0.0f;
             enAire = false;
+            actualizarHitbox();
         }
     }
 }
 
 void Ray::dibujar(sf::RenderWindow& ventana) {
     ventana.draw(sprite);
+    // Opcionalmente para debug, dibujar la hitbox
+    //ventana.draw(hitbox);
 }
-

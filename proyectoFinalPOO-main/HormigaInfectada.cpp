@@ -6,6 +6,14 @@
 HormigaInfectada::HormigaInfectada() {
     // Inicializar semilla para números aleatorios
     srand((unsigned int)time(nullptr));
+
+    // Inicializar hitbox y collider
+    hitbox.setSize(sf::Vector2f(40.0f, 40.0f));
+    hitbox.setFillColor(sf::Color::Transparent);
+    hitbox.setOutlineColor(sf::Color::Red);
+    hitbox.setOutlineThickness(1.0f);
+
+    collider = new Collider(hitbox);
 }
 
 HormigaInfectada::HormigaInfectada(std::string nombre, int vitalidad, std::vector<int> posicion)
@@ -13,6 +21,14 @@ HormigaInfectada::HormigaInfectada(std::string nombre, int vitalidad, std::vecto
 
     // Inicializar generador de números aleatorios
     srand((unsigned int)time(nullptr));
+
+    // Inicializar hitbox y collider
+    hitbox.setSize(sf::Vector2f(40.0f, 40.0f));
+    hitbox.setFillColor(sf::Color::Transparent);
+    hitbox.setOutlineColor(sf::Color::Red);
+    hitbox.setOutlineThickness(1.0f);
+
+    collider = new Collider(hitbox);
 
     // Cargar texturas
     cargarTexturas();
@@ -22,11 +38,15 @@ HormigaInfectada::HormigaInfectada(std::string nombre, int vitalidad, std::vecto
     sprite.setPosition(posicion[0], posicion[1]);
     sprite.setScale(2.0f, 2.0f);
 
+    // Actualizar hitbox a la posición inicial
+    actualizarHitbox();
+
     // Iniciar con dirección aleatoria
     direccionActual = (rand() % 2 == 0) ? 1 : -1;
 }
 
 HormigaInfectada::~HormigaInfectada() {
+    delete collider;
 }
 
 void HormigaInfectada::cargarTexturas() {
@@ -54,6 +74,19 @@ void HormigaInfectada::cargarTexturas() {
     }
 }
 
+void HormigaInfectada::setPosicion(float x, float y) {
+    sprite.setPosition(x, y);
+    actualizarHitbox();
+}
+
+void HormigaInfectada::actualizarHitbox() {
+    // Centrar la hitbox en el sprite
+    sf::FloatRect bounds = sprite.getGlobalBounds();
+    hitbox.setSize(sf::Vector2f(bounds.width * 0.8f, bounds.height * 0.8f));
+    hitbox.setPosition(bounds.left + bounds.width * 0.1f,
+                       bounds.top + bounds.height * 0.1f);
+}
+
 int HormigaInfectada::liberarEsporas() {
     // Número aleatorio de esporas entre 1 y 3
     return rand() % 3 + 1;
@@ -68,6 +101,7 @@ void HormigaInfectada::caminarErraticamente() {
 
     // Mover en la dirección actual
     sprite.move(velocidad * direccionActual, 0.f);
+    actualizarHitbox();
 
     // Actualizar estado según dirección
     moviendoDerecha = (direccionActual > 0);
@@ -105,82 +139,74 @@ void HormigaInfectada::actualizar(Escenario* escenario) {
     // Realizar movimiento errático
     caminarErraticamente();
 
-    // Vector de velocidad actual (para colisiones)
-    sf::Vector2f velocidadActual(velocidad * direccionActual, velocidadY);
-
     // Física para caer por gravedad
     if (enAire) {
         // Aplicar gravedad
         velocidadY += gravedad;
-        velocidadActual.y = velocidadY;
 
         // Mover verticalmente
         sprite.move(0, velocidadY);
+        actualizarHitbox();
     }
 
-    // Verificar colisiones con plataformas
+    // Verificar colisiones con plataformas usando el sistema Collider
     if (escenario) {
-        sf::FloatRect objetoBounds = sprite.getGlobalBounds();
-        ColisionInfo info = escenario->verificarColisionConPlataformas(objetoBounds, velocidadActual);
+        sf::Vector2f direction;
 
-        if (info.colision) {
-            switch (info.tipo) {
-                case ColisionTipo::ARRIBA:
-                    // Colisión con la parte superior de una plataforma (hormiga saltando)
-                    sprite.setPosition(posicionAnterior.x, info.plataformaBounds.top + info.plataformaBounds.height + 1.0f);
-                    velocidadY = 0.1f; // Rebote pequeño
-                    break;
+        // Verificar colisiones usando el sistema Collider
+        bool colision = escenario->checkCollision(*collider, direction, 1.0f);
 
-                case ColisionTipo::ABAJO:
-                    // Colisión con la parte inferior de una plataforma (hormiga cayendo)
-                    sprite.setPosition(posicionAnterior.x, info.plataformaBounds.top - objetoBounds.height);
-                    velocidadY = 0.0f;
-                    enAire = false;
-                    break;
+        if (colision) {
+            // Actualizar la posición del sprite para que coincida con la hitbox movida por el Collider
+            sf::Vector2f hitboxPos = hitbox.getPosition();
 
-                case ColisionTipo::IZQUIERDA:
-                    // Colisión con el lado izquierdo de una plataforma
-                    sprite.setPosition(info.plataformaBounds.left - objetoBounds.width, posicionAnterior.y);
-                    // Cambiar dirección al chocar
-                    direccionActual = -1;
-                    moviendoDerecha = false;
-                    break;
-
-                case ColisionTipo::DERECHA:
-                    // Colisión con el lado derecho de una plataforma
-                    sprite.setPosition(info.plataformaBounds.left + info.plataformaBounds.width, posicionAnterior.y);
-                    // Cambiar dirección al chocar
-                    direccionActual = 1;
-                    moviendoDerecha = true;
-                    break;
-
-                default:
-                    break;
+            if (direction.y < 0.0f) {
+                // Colisión desde abajo (el personaje estaba saltando)
+                velocidadY = 0.1f; // Rebote pequeño
             }
-        } else {
+            else if (direction.y > 0.0f) {
+                // Colisión desde arriba (el personaje estaba cayendo)
+                velocidadY = 0.0f;
+                enAire = false;
+            }
+            else if (direction.x != 0.0f) {
+                // Colisión lateral, cambiar dirección
+                direccionActual = -direccionActual;
+            }
+
+            // Ajustar la posición del sprite en función de la hitbox
+            sf::FloatRect bounds = sprite.getGlobalBounds();
+            sprite.setPosition(
+                hitboxPos.x - bounds.width * 0.1f,
+                hitboxPos.y - bounds.height * 0.1f
+            );
+        }
+        else {
             // No hay colisión directa, verificar si debe caer
-            bool enPlataforma = false;
-            float alturaPlatforma = escenario->getAlturaPlatformaEn(
-                sprite.getPosition().x + sprite.getGlobalBounds().width / 2,
-                sprite.getPosition().y,
-                sprite.getGlobalBounds().height,
-                enPlataforma
+            float alturaPlataforma;
+            sf::Vector2f pos = sprite.getPosition();
+            sf::FloatRect bounds = sprite.getGlobalBounds();
+
+            bool sobrePlataforma = escenario->estaSobrePlataforma(
+                pos.x + bounds.width / 2,
+                pos.y,
+                bounds.height,
+                alturaPlataforma
             );
 
-            // Si no está en el aire ni en una plataforma, debe caer
-            if (!enAire && !enPlataforma && sprite.getPosition().y + sprite.getGlobalBounds().height < alturaPlatforma) {
+            // Si no está en el aire y no está sobre una plataforma, debe caer
+            if (!enAire && !sobrePlataforma) {
                 enAire = true;
                 velocidadY = 0.1f; // Velocidad inicial pequeña
             }
 
-            // Si está en el aire y ha llegado al suelo o una plataforma
-            if (enAire) {
-                if (sprite.getPosition().y + sprite.getGlobalBounds().height >= alturaPlatforma) {
-                    // Aterrizó en una plataforma o en el suelo
-                    sprite.setPosition(sprite.getPosition().x, alturaPlatforma - sprite.getGlobalBounds().height);
-                    velocidadY = 0.0f;
-                    enAire = false;
-                }
+            // Si está en el aire y ha llegado a una plataforma
+            if (enAire && sobrePlataforma && pos.y + bounds.height > alturaPlataforma - 5.0f) {
+                // Aterrizó en una plataforma
+                sprite.setPosition(pos.x, alturaPlataforma - bounds.height);
+                velocidadY = 0.0f;
+                enAire = false;
+                actualizarHitbox();
             }
         }
 
@@ -193,6 +219,7 @@ void HormigaInfectada::actualizar(Escenario* escenario) {
             // Cambiar dirección
             direccionActual = 1;
             moviendoDerecha = true;
+            actualizarHitbox();
         }
 
         // Límite derecho (considerando el ancho del sprite)
@@ -201,6 +228,7 @@ void HormigaInfectada::actualizar(Escenario* escenario) {
             // Cambiar dirección
             direccionActual = -1;
             moviendoDerecha = false;
+            actualizarHitbox();
         }
 
         // Límite inferior (suelo)
@@ -208,6 +236,7 @@ void HormigaInfectada::actualizar(Escenario* escenario) {
             sprite.setPosition(pos.x, escenario->getAlturaSuelo() - sprite.getGlobalBounds().height);
             velocidadY = 0.0f;
             enAire = false;
+            actualizarHitbox();
         }
     }
 }
@@ -215,4 +244,6 @@ void HormigaInfectada::actualizar(Escenario* escenario) {
 void HormigaInfectada::dibujar(sf::RenderWindow& ventana) {
     // Siempre dibujar el sprite, ya sea vivo o muerto
     ventana.draw(sprite);
+    // Opcionalmente para debug, dibujar la hitbox
+    //ventana.draw(hitbox);
 }

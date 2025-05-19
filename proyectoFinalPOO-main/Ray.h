@@ -5,7 +5,8 @@
 #include <vector>
 #include "Jugador.h"
 #include "Personaje.h"
-#include "Escenario.h"  // Añadir include para Escenario
+#include "Escenario.h"
+#include "Collider.h"
 
 // Clase forward declaration para evitar inclusión circular
 class HormigaInfectada;
@@ -14,6 +15,8 @@ class HormigaInfectada;
 class Ray : public Personaje, public Jugador {
 private:
     // Miembros propios
+    sf::RectangleShape hitbox;  // Hitbox para colisiones
+    Collider* collider;         // Collider para el sistema AABB
 
     std::vector<sf::Texture> texturasDerecha;
     std::vector<sf::Texture> texturasIzquierda;
@@ -31,8 +34,8 @@ private:
     sf::Clock relojAtaque;
 
     // Variables para el salto
-    float velocidadY = 20000.0f;
-    float gravedad = 1.0f;
+    float velocidadY = 0.0f;
+    float gravedad = 0.3f;
     bool enAire = false;
     float alturaSuelo = 750.0f;
 
@@ -66,16 +69,19 @@ public:
     bool estaMirandoDerecha() const { return mirandoDerecha; }
     bool estaAtacando() const { return atacando; }
     float getAlturaSuelo() const { return alturaSuelo; }
-    void setPosicion(float x, float y) { sprite.setPosition(x, y); }
-    sf::FloatRect getBounds() const { return sprite.getGlobalBounds(); }
+    sf::FloatRect getBounds() const { return hitbox.getGlobalBounds(); }
+    Collider* getCollider() const { return collider; }
+
+    void setPosicion(float x, float y);
 
     // Métodos para actualizar y dibujar
-    void actualizar(Escenario* escenario = nullptr);  // Modificado para recibir escenario
+    void actualizar(Escenario* escenario = nullptr);
     void dibujar(sf::RenderWindow& ventana);
 
 private:
     // Métodos auxiliares privados para cargar texturas
     void cargarTexturas();
+    void actualizarHitbox();
 };
 
 #endif

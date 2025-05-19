@@ -93,7 +93,10 @@ Escenario::Escenario() : fondoCargado(false) {
 }
 
 Escenario::~Escenario() {
-    // Destructor vacío
+    // Liberar memoria de los colisionadores
+    for (auto& collider : colisionadores) {
+        delete collider;
+    }
 }
 
 void Escenario::agregarPlataforma(float x, float y, float ancho, float alto) {
@@ -101,107 +104,54 @@ void Escenario::agregarPlataforma(float x, float y, float ancho, float alto) {
     plataforma.setPosition(x, y);
 
     // Para plataformas visibles (durante pruebas):
-    plataforma.setFillColor(sf::Color::Transparent);
+    plataforma.setFillColor(sf::Color::Red);
 
     plataformas.push_back(plataforma);
+
+    // Crear el colisionador para esta plataforma
+    colisionadores.push_back(new Collider(plataformas.back()));
 }
 
-bool Escenario::verificarColisionPlataforma(const sf::FloatRect& objetoBounds) {
-    for (const auto& plataforma : plataformas) {
-        if (plataforma.getGlobalBounds().intersects(objetoBounds)) {
-            return true;
-        }
-    }
-    return false;
-}
+// Método que usa el sistema Collider para verificar colisiones
+bool Escenario::checkCollision(Collider& personajeCollider, sf::Vector2f& direction, float pushForce) {
+    bool colision = false;
 
-// MÉTODO SIMPLIFICADO: detectar colisiones con plataformas de manera más sencilla
-ColisionInfo Escenario::verificarColisionConPlataformas(const sf::FloatRect& objetoBounds, const sf::Vector2f& velocidad) {
-    ColisionInfo info;
-    info.colision = false;
-    info.tipo = ColisionTipo::NINGUNA;
-
-    for (const auto& plataforma : plataformas) {
-        sf::FloatRect plataformaBounds = plataforma.getGlobalBounds();
-
-        // Si hay intersección entre el objeto y la plataforma
-        if (plataformaBounds.intersects(objetoBounds)) {
-            info.colision = true;
-            info.plataformaBounds = plataformaBounds;
-
-            // Determinar el tipo de colisión de manera simplificada
-            // basándonos en la dirección del movimiento
-
-            // Si hay movimiento vertical
-            if (std::abs(velocidad.y) > 0.01f) {
-                if (velocidad.y > 0) {
-                    // Cayendo, colisión con la parte inferior del objeto
-                    info.tipo = ColisionTipo::ABAJO;
-                    return info;
-                }
-                else if (velocidad.y < 0) {
-                    // Saltando, colisión con la parte superior del objeto
-                    info.tipo = ColisionTipo::ARRIBA;
-                    return info;
-                }
-            }
-
-            // Si hay movimiento horizontal
-            if (std::abs(velocidad.x) > 0.01f) {
-                if (velocidad.x > 0) {
-                    // Moviéndose a la derecha
-                    info.tipo = ColisionTipo::DERECHA;
-                    return info;
-                }
-                else if (velocidad.x < 0) {
-                    // Moviéndose a la izquierda
-                    info.tipo = ColisionTipo::IZQUIERDA;
-                    return info;
-                }
-            }
-
-            // Si no hay movimiento pero hay colisión, determinar basado
-            // en la posición relativa objeto-plataforma
-            float centroObjX = objetoBounds.left + objetoBounds.width / 2.0f;
-            float centroPlataformaX = plataformaBounds.left + plataformaBounds.width / 2.0f;
-
-            if (centroObjX < centroPlataformaX) {
-                info.tipo = ColisionTipo::DERECHA;
-            } else {
-                info.tipo = ColisionTipo::IZQUIERDA;
-            }
-
-            return info;
+    // Verificar colisión con cada plataforma
+    for (auto& collider : colisionadores) {
+        if (collider->checkCollision(personajeCollider, direction, pushForce)) {
+            colision = true;
         }
     }
 
-    return info;
+    return colision;
 }
 
-float Escenario::getAlturaPlatformaEn(float posX, float posY, float alturaObjeto, bool& enPlataforma) {
-    enPlataforma = false;
-    float alturaMinima = alturaSuelo;
+// Método para verificar si un punto está sobre una plataforma
+bool Escenario::estaSobrePlataforma(float posX, float posY, float altura, float& alturaPlataforma) {
+    alturaPlataforma = alturaSuelo; // Por defecto, el suelo
+    bool sobrePlataforma = false;
 
     for (const auto& plataforma : plataformas) {
         sf::FloatRect bounds = plataforma.getGlobalBounds();
 
-        // Verificar si el punto está directamente sobre una plataforma (en el eje X)
+        // Verificar si el punto (posX, posY + altura) está encima de esta plataforma
         if (posX >= bounds.left && posX < bounds.left + bounds.width) {
-            // Calcular distancia vertical entre el objeto y la plataforma
-            float distanciaAlPiso = bounds.top - (posY + alturaObjeto);
+            // Calcular la distancia vertical entre el borde inferior del personaje y el borde superior de la plataforma
+            float distanciaVertical = bounds.top - (posY + altura);
 
-            // Si el objeto está por encima de la plataforma o muy cerca (tolerancia de 5 píxeles)
-            if (distanciaAlPiso > -5.0f && distanciaAlPiso <= 10.0f) {
-                // La plataforma está justo debajo o muy cerca del objeto
-                if (bounds.top < alturaMinima) {
-                    alturaMinima = bounds.top;
-                    enPlataforma = true;
+            // Si la distancia es pequeña y positiva (personaje justo encima de la plataforma)
+            // o si la distancia es negativa pero muy pequeña (penetrando ligeramente la plataforma)
+            if (distanciaVertical >= -5.0f && distanciaVertical <= 10.0f) {
+                // Si esta plataforma está más arriba que la última encontrada
+                if (bounds.top < alturaPlataforma) {
+                    alturaPlataforma = bounds.top;
+                    sobrePlataforma = true;
                 }
             }
         }
     }
 
-    return alturaMinima;
+    return sobrePlataforma;
 }
 
 void Escenario::configurarLimites(float izq, float der, float sup, float inf) {
