@@ -101,9 +101,15 @@ Escenario::~Escenario() {
 
 void Escenario::agregarPlataforma(float x, float y, float ancho, float alto) {
     sf::RectangleShape plataforma(sf::Vector2f(ancho, alto));
-    plataforma.setPosition(x, y);
 
-    // Para plataformas visibles (durante pruebas):
+    // Importante: Establecer el origen en el centro del bloque
+    // Esta modificación es clave para que las colisiones funcionen como en el proyecto de referencia
+    plataforma.setOrigin(ancho / 2.0f, alto / 2.0f);
+
+    // La posición ahora debe ajustarse para tener en cuenta el origen centrado
+    plataforma.setPosition(x + ancho / 2.0f, y + alto / 2.0f);
+
+    // Color para las plataformas (puedes ajustar para que sean más o menos visibles)
     plataforma.setFillColor(sf::Color::Red);
 
     plataformas.push_back(plataforma);
@@ -120,6 +126,7 @@ bool Escenario::checkCollision(Collider& personajeCollider, sf::Vector2f& direct
     for (auto& collider : colisionadores) {
         if (collider->checkCollision(personajeCollider, direction, pushForce)) {
             colision = true;
+            // No salimos del bucle para verificar todas las posibles colisiones
         }
     }
 
@@ -132,19 +139,27 @@ bool Escenario::estaSobrePlataforma(float posX, float posY, float altura, float&
     bool sobrePlataforma = false;
 
     for (const auto& plataforma : plataformas) {
-        sf::FloatRect bounds = plataforma.getGlobalBounds();
+        // Obtener el centro y tamaño de la plataforma considerando el origen centrado
+        sf::Vector2f centro = plataforma.getPosition();
+        sf::Vector2f tamaño = plataforma.getSize();
+
+        // Calcular los límites reales de la plataforma
+        float izquierda = centro.x - tamaño.x / 2.0f;
+        float derecha = centro.x + tamaño.x / 2.0f;
+        float arriba = centro.y - tamaño.y / 2.0f;
+        float abajo = centro.y + tamaño.y / 2.0f;
 
         // Verificar si el punto (posX, posY + altura) está encima de esta plataforma
-        if (posX >= bounds.left && posX < bounds.left + bounds.width) {
+        if (posX >= izquierda && posX <= derecha) {
             // Calcular la distancia vertical entre el borde inferior del personaje y el borde superior de la plataforma
-            float distanciaVertical = bounds.top - (posY + altura);
+            float distanciaVertical = arriba - (posY + altura);
 
             // Si la distancia es pequeña y positiva (personaje justo encima de la plataforma)
             // o si la distancia es negativa pero muy pequeña (penetrando ligeramente la plataforma)
             if (distanciaVertical >= -5.0f && distanciaVertical <= 10.0f) {
                 // Si esta plataforma está más arriba que la última encontrada
-                if (bounds.top < alturaPlataforma) {
-                    alturaPlataforma = bounds.top;
+                if (arriba < alturaPlataforma) {
+                    alturaPlataforma = arriba;
                     sobrePlataforma = true;
                 }
             }

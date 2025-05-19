@@ -12,7 +12,7 @@ private:
     sf::Sprite spriteFondo;
     bool fondoCargado;
 
-    // Plataformas
+    // Plataformas - usando clase Block en lugar de RectangleShape directamente
     std::vector<sf::RectangleShape> plataformas;
 
     // Colisionadores para las plataformas

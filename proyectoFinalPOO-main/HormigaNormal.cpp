@@ -137,37 +137,43 @@ void HormigaNormal::actualizar(Escenario* escenario) {
         actualizarHitbox();
     }
 
-    // Verificar colisiones con plataformas usando el sistema Collider
+    // Verificar colisiones con el escenario
     if (escenario) {
-        sf::Vector2f direction;
-
-        // Verificar colisiones usando el sistema Collider
+        sf::Vector2f direction(0.0f, 0.0f);
         bool colision = escenario->checkCollision(*collider, direction, 1.0f);
 
         if (colision) {
-            // Actualizar la posición del sprite para que coincida con la hitbox movida por el Collider
+            // Actualizar la posición del sprite basado en el movimiento del collider
             sf::Vector2f hitboxPos = hitbox.getPosition();
 
-            if (direction.y < 0.0f) {
-                // Colisión desde abajo (el personaje estaba saltando)
-                velocidadY = 0.1f; // Rebote pequeño
-            }
-            else if (direction.y > 0.0f) {
-                // Colisión desde arriba (el personaje estaba cayendo)
-                velocidadY = 0.0f;
-                enAire = false;
+            // Manejar distintos tipos de colisión
+            if (direction.x != 0.0f) {
+                // Colisión lateral - detener movimiento horizontal
+                sprite.setPosition(usingCustomHitbox ?
+                                  hitboxPos.x - hitboxOffsetX :
+                                  hitboxPos.x - (sprite.getGlobalBounds().width * 0.1f),
+                                  sprite.getPosition().y);
             }
 
-            // Ajustar la posición del sprite en función de la hitbox
-            if (usingCustomHitbox) {
-                sprite.setPosition(hitboxPos.x - hitboxOffsetX, hitboxPos.y - hitboxOffsetY);
-            } else {
-                sf::FloatRect bounds = sprite.getGlobalBounds();
-                sprite.setPosition(
-                    hitboxPos.x - bounds.width * 0.1f,
-                    hitboxPos.y - bounds.height * 0.1f
-                );
+            if (direction.y < 0.0f) {
+                // Colisión desde abajo (personaje saltando)
+                velocidadY = 0.1f; // Pequeño rebote
+                sprite.setPosition(sprite.getPosition().x,
+                                  usingCustomHitbox ?
+                                  hitboxPos.y - hitboxOffsetY :
+                                  hitboxPos.y - (sprite.getGlobalBounds().height * 0.1f));
             }
+            else if (direction.y > 0.0f) {
+                // Colisión desde arriba (personaje cayendo)
+                velocidadY = 0.0f;
+                enAire = false;
+                sprite.setPosition(sprite.getPosition().x,
+                                  usingCustomHitbox ?
+                                  hitboxPos.y - hitboxOffsetY :
+                                  hitboxPos.y - (sprite.getGlobalBounds().height * 0.1f));
+            }
+
+            actualizarHitbox();
         }
         else {
             // No hay colisión directa, verificar si debe caer
@@ -175,6 +181,7 @@ void HormigaNormal::actualizar(Escenario* escenario) {
             sf::Vector2f pos = sprite.getPosition();
             sf::FloatRect bounds = sprite.getGlobalBounds();
 
+            // Usar el método mejorado para detectar si está sobre una plataforma
             bool sobrePlataforma = escenario->estaSobrePlataforma(
                 pos.x + bounds.width / 2,
                 pos.y,
